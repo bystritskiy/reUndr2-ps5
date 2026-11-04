@@ -1,0 +1,819 @@
+diff --git a/src/main.c b/src/main.c
+index d703831..77ab80d 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -246,6 +246,7 @@ void xbox_gil_enter(void);             /* kernel_bridge.c: the guest lock */
+ void xbox_gil_leave(void);
+ void xbox_gil_mark_main(void);
+ void nfsu2_text_patch_init(void);    /* text_patch.c: Switch button names */
++void nfsu2_movie_crop_init(void);    /* movie_crop.c: 16:9 movies */
+ void nfsu2_options_load(void);      /* recomp_manual.c: Options -> Video rows */
+ 
+ #ifdef __SWITCH__
+@@ -283,7 +284,7 @@ int main(int argc, char **argv)
+     return rc;
+ }
+ #else
+-int main(int argc, char **argv)
++int nfsu2_game_main(int argc, char **argv)
+ {
+     (void)argc;
+     (void)argv;
+@@ -421,8 +422,16 @@ static int game_main(void)
+ 
+     xbox_kernel_init();
+     nfsu2_text_patch_init();
++    nfsu2_movie_crop_init();
+     nfsu2_options_load();
++#if defined(NFSU2_PS5)
++    { extern int nv2a_vk_prepare(void); if (!nv2a_vk_prepare()) { fatal("PS5 Vulkan initialization failed. See /data/nfsu2/PPSA99027/stderr.log"); return 1; } }
++#endif
++#if defined(NFSU2_PS5)
++    xbox_path_init(game_dir, "/data/nfsu2/PPSA99027/save");
++#else
+     xbox_path_init(game_dir, NFSU2_DEFAULT_SAVE_DIR);
++#endif
+     xbox_kernel_bridge_init();
+ 
+     g_esp = XBOX_STACK_TOP;
+diff --git a/src/movie_crop.c b/src/movie_crop.c
+index a512c38..e9f5ae7 100644
+--- a/src/movie_crop.c
++++ b/src/movie_crop.c
+@@ -112,7 +112,7 @@ static void movie_hook(Nv2aRawBatch *rb, float *attrs)
+     }
+ }
+ 
+-__attribute__((constructor)) static void movie_crop_init(void)
++void nfsu2_movie_crop_init(void)
+ {
+     nv2a_raw_batch_hook = movie_hook;
+ }
+diff --git a/src/recomp_manual.c b/src/recomp_manual.c
+index 041bfeb..cd38d3d 100644
+--- a/src/recomp_manual.c
++++ b/src/recomp_manual.c
+@@ -1722,7 +1722,7 @@ void sub_0033518D(void)
+  * (rows of six at 0x39CE20, row = frame % [0x39CE18]); after it, Off
+  * clears all six.
+  *
+- * Resolution Scale (Vulkan build only): 1x, 1.5x (default), 2x, 2.5x,
++ * Resolution Scale (Vulkan build only): 1x, 1.5x (default), 2x, 2.5x, 3x, 4.5x,
+  * handed to the renderer as nv2a_vk_scale_pct, applied at its next flip
+  * (nv2a_vk.c rescale_surfaces). Without a saved value RECOMP_GL_SCALE
+  * still decides, and the row shows the nearest step.
+@@ -1752,7 +1752,9 @@ void sub_0033518D(void)
+  * file (menu_music= .. engine=, 0..1): written into the block when the
+  * profile is first applied, saved when a slider hands the block to
+  * sub_00076A70 with a changed value. */
+-#ifdef __SWITCH__
++#if defined(NFSU2_PS5)
++#  define NFSU2_OPTIONS_FILE "/data/nfsu2/PPSA99027/nfsu2x_options.txt"
++#elif defined(__SWITCH__)
+ #  define NFSU2_OPTIONS_FILE "sdmc:/switch/nfsu2x/nfsu2x_options.txt"
+ #else
+ #  define NFSU2_OPTIONS_FILE "nfsu2x_options.txt"
+@@ -1780,7 +1782,8 @@ extern void sub_000B51A0_gen(void);
+ extern void sub_0009B720_gen(void);
+ extern void sub_00076A70_gen(void);
+ 
+-static const int s_scale_pct[] = { 100, 150, 200, 250 };
++static const int s_scale_pct[] = { 100, 150, 200, 250, 300, 450 };
++#define N_SCALES ((int)(sizeof s_scale_pct / sizeof s_scale_pct[0]))
+ static const int s_aniso_lvl[] = { 1, 2, 4, 8, 16 };
+ 
+ /* Options -> Audio rows, top to bottom. */
+@@ -1842,6 +1845,7 @@ static void picture_changed(void)
+ static const uint32_t s_refl_texts[] = { 0x0000CCFAu, 0x0000063Cu };    /* Off, On */
+ static const uint32_t s_scale_texts[] = {
+     0x2A2A4AB3u, 0x822E4E9Bu, 0xB55E7665u, 0xD3588630u,                 /* 1x .. 2.5x */
++    0x3EB318CEu, 0x153E7337u,                                           /* 3x, 4.5x */
+ };
+ static const uint32_t s_aniso_texts[] = {
+     0x0000CCFAu, 0xB55E7665u, 0xA7A683ACu, 0x6F2C7417u, 0x62925361u,    /* Off, 2x .. 16x */
+@@ -1854,7 +1858,7 @@ static const uint32_t s_vib_texts[] = {
+ static OptRow s_rows[] = {
+     { 0x8FE9288Eu, s_refl_texts, 2, &s_refl, refl_changed, 0, 0 },     /* Car Reflections */
+ #ifdef NFSU2_VULKAN
+-    { 0x4AC50BCFu, s_scale_texts, 4, &s_scale_idx, scale_changed, 0, 0 }, /* Resolution Scale */
++    { 0x4AC50BCFu, s_scale_texts, N_SCALES, &s_scale_idx, scale_changed, 0, 0 }, /* Resolution Scale */
+     { 0x4CD775ACu, s_refl_texts, 2, &s_fxaa, picture_changed, 0, 0 },  /* Anti-Aliasing */
+     { 0x4E57D355u, s_aniso_texts, 5, &s_aniso_idx, picture_changed, 0, 0 }, /* Anisotropic */
+     { 0xA9C27DFDu, s_refl_texts, 2, &s_square, picture_changed, 0, 0 }, /* Square Pixels */
+@@ -1911,7 +1915,7 @@ void nfsu2_options_load(void)
+             }
+             else if (!strncmp(line, "scale=", 6)) {
+                 int pct = atoi(line + 6);
+-                for (i = 0; i < 4; i++)
++                for (i = 0; i < N_SCALES; i++)
+                     if (s_scale_pct[i] == pct) {
+                         s_scale_idx = i;
+                         s_scale_saved = 1;
+@@ -1929,7 +1933,7 @@ void nfsu2_options_load(void)
+             /* RECOMP_GL_SCALE stays in charge until the option is changed;
+              * the row shows the nearest step. */
+             double k = strtod(e, NULL), best = 1e9;
+-            for (i = 0; i < 4; i++) {
++            for (i = 0; i < N_SCALES; i++) {
+                 double d = fabs(k * 100.0 - s_scale_pct[i]);
+                 if (d < best) { best = d; s_scale_idx = i; }
+             }
+diff --git a/src/text_patch.c b/src/text_patch.c
+index 08482a7..4fed3d6 100644
+--- a/src/text_patch.c
++++ b/src/text_patch.c
+@@ -40,6 +40,8 @@ static const struct { uint32_t hash; const char *text; } s_always[] = {
+     { 0x822E4E9Bu, "1.5x" },                     /* "Motion Blur" */
+     { 0xB55E7665u, "2x" },                       /* "Level Of Detail" */
+     { 0xD3588630u, "2.5x" },                     /* "Widescreen" */
++    { 0x3EB318CEu, "3x" },                       /* "Shift Up" */
++    { 0x153E7337u, "4.5x" },                     /* "Steering (Left)" */
+     { 0x4CD775ACu, "Anti-Aliasing" },            /* "Full Screen Anti-Aliasing" */
+     { 0x4E57D355u, "Anisotropic" },              /* "Horizon Fog" */
+     { 0xA9C27DFDu, "Square Pixels" },            /* "Depth Of Field" */
+@@ -64,6 +66,28 @@ static int s_switch_words;
+ 
+ /* Whole strings, by label hash. */
+ static const struct { uint32_t hash; const char *text; } s_by_hash[] = {
++#if defined(NFSU2_PS5)
++    { 0x45A6A9CEu, "Please press OPTIONS to begin" },  /* TITLE_SCREEN_START_PROMPT_XBOX */
++    { 0xEEEB248Eu, "Press OPTIONS" },            /* TITLE_SCREEN_START_PROMPT */
++    { 0x1F181F57u, "Press OPTIONS" },            /* TITLE_SCREEN_START_PROMPT_GC */
++    { 0xFC6731A6u, "Player One Press OPTIONS" }, /* PLAYER_ONE_PRESS_START */
++    { 0x5BC4BC1Eu, "Player Two Press OPTIONS" }, /* PLAYER_TWO_PRESS_START */
++    { 0x5A890BDAu, "Player One Press OPTIONS" }, /* PLAYER_ONE_PRESS_START_PS2 */
++    { 0xEA171252u, "Player Two Press OPTIONS" }, /* PLAYER_TWO_PRESS_START_PS2 */
++    { 0xD461C58Au, "OPTIONS" },                  /* UI_START (replay legend) */
++    { 0xC5146FE8u, "R1" },                       /* UI_REPLAY_SELECT_XBOX "Black" */
++    { 0x97B3C8CFu, "PS5 storage" },              /* SAVELOAD_TITLE_XBOX */
++    { 0x3991DD49u, "PS5 storage" },              /* IO_DEVICE_XBOX_DESCRIPTION */
++    { 0xF46A8B02u, "Headset" },                  /* OLX_XBOX_COMMUNICATOR */
++    { 0xF20BF2F0u, "Online" },                   /* UI_ONLINE_XBOX_LIVE */
++    { 0xF673DAB6u, "Please reconnect your DualSense." },  /* ERROR_UNPLUGGED_CONTROLLER */
++    { 0x2A5F78F6u, "Please reconnect your DualSense." },  /* ERROR_UNPLUGGED_CONTROLLER_XBOX */
++    { 0x2A5B5F42u, "Please reconnect your DualSense." },  /* ERROR_UNPLUGGED_CONTROLLER_PSX2 */
++    { 0x1B99CA46u, "Your console cannot connect to the online service."
++                   "  Do you want to start the troubleshooter?" },
++    { 0xFD9E06CDu, "Are you sure you want to exit to the home screen"
++                   " and create a new online account?" },
++#else
+     { 0x45A6A9CEu, "Please press + to begin" },  /* TITLE_SCREEN_START_PROMPT_XBOX */
+     { 0xEEEB248Eu, "Press +" },                  /* TITLE_SCREEN_START_PROMPT */
+     { 0x1F181F57u, "Press +" },                  /* TITLE_SCREEN_START_PROMPT_GC */
+@@ -79,6 +103,7 @@ static const struct { uint32_t hash; const char *text; } s_by_hash[] = {
+                    "  Do you want to start the troubleshooter?" },
+     { 0xFD9E06CDu, "Are you sure you want to exit to the HOME Menu"
+                    " and create a new online account?" },
++#endif
+ };
+ 
+ /* Substrings, first match wins at each position; for every other string. */
+@@ -98,8 +123,13 @@ static const struct { const char *from, *to; } s_rules[] = {
+     { "to Xbox Live until", "online until" },
+     { "Xbox Live", "Online" },
+     { "your Xbox personal information", "your personal information" },
++#if defined(NFSU2_PS5)
++    { "Xbox hard disk", "PS5 storage" },
++    { "Xbox Dashboard", "home screen" },
++#else
+     { "Xbox hard disk", "SD card" },
+     { "Xbox Dashboard", "HOME Menu" },
++#endif
+     { "Gamertag", "Username" },
+     { "Thumbstick", "Stick" },
+ };
+@@ -187,7 +217,7 @@ static void patch_chunk(uint8_t *c, size_t avail)
+     for (k = 0; k < count; k++)
+         wr32(t + 8 * k + 4, noff[k]);
+     printf("[TEXT] %s: %d of %u strings changed\n",
+-           english && s_switch_words ? "Switch wording" : "option labels", changed, count);
++           english && s_switch_words ? "console wording" : "option labels", changed, count);
+     free(out); free(noff);
+     return;
+ fail:
+@@ -195,6 +225,76 @@ fail:
+     free(out); free(noff);
+ }
+ 
++#if defined(NFSU2_PS5)
++/* The XDK's save messages are not in the language tables: each language has a
++ * small LOCH file of UTF-16 strings, LOCL: id, size, zero, count, offsets from
++ * LOCL, strings. The rows are the XDK's; the file only gets shorter. */
++static const struct { uint32_t row; const char *text; } s_save_text[] = {
++    {  8, "Your PS5 has insufficient space for saved data." },
++    {  9, "Loading %1. Please do not close the game." },
++    { 11, "Save storage %1 is unavailable. Load failed." },
++    { 13, "Your PS5 has insufficient space for saved data." },
++    { 14, "Insufficient space in save storage %1." },
++    { 16, "Are you sure you want to overwrite %1 in save storage %2?" },
++    { 17, "Saving %1. Please do not turn off your PS5." },
++    { 18, "Saving to save storage %1. Please do not close the game." },
++    { 20, "Save storage %1 is unavailable. Save failed." },
++    { 22, "Deleting %1. Please do not turn off your PS5." },
++    { 23, "Deleting %1 from save storage %2. Please do not close the game." },
++    { 25, "Save storage %1 is unavailable. Delete failed." },
++    { 26, "PS5 storage" },
++    { 27, "Saved data" },
++};
++#define LOCL_ROWS 28u
++
++static const char *save_text(uint32_t row)
++{
++    for (size_t i = 0; i < sizeof s_save_text / sizeof s_save_text[0]; i++)
++        if (s_save_text[i].row == row) return s_save_text[i].text;
++    return NULL;
++}
++
++/* A file of avail bytes at b; only the English one, told by row 26. */
++static void patch_save_text(uint8_t *b, size_t avail)
++{
++    static const char english[] = "Xbox hard";
++    uint32_t file = 0, l = 0;
++    for (size_t i = 0; i + 4 <= avail && i < 512; i += 4)
++        if (!memcmp(b + i, "LOCL", 4)) { l = (uint32_t)i; break; }
++    if (!l || avail < l + 16 + 4ull * LOCL_ROWS || rd32(b + l + 12) != LOCL_ROWS) return;
++    file = l + rd32(b + l + 4);
++    if (file > avail) return;
++    uint32_t first = 16 + 4 * LOCL_ROWS, at = rd32(b + l + 16 + 4 * 26);
++    if (at + 2 * sizeof english > file - l) return;
++    for (size_t i = 0; i + 1 < sizeof english; i++)
++        if (b[l + at + 2 * i] != (uint8_t)english[i] || b[l + at + 2 * i + 1]) return;
++
++    uint8_t *out = calloc(1, file - l);
++    if (!out) return;
++    uint32_t pos = first;
++    for (uint32_t r = 0; r < LOCL_ROWS; r++) {
++        uint32_t a = rd32(b + l + 16 + 4 * r);
++        uint32_t e = r + 1 < LOCL_ROWS ? rd32(b + l + 16 + 4 * (r + 1)) : file - l;
++        const char *text = save_text(r);
++        uint32_t chars = text ? (uint32_t)strlen(text) : (e - a) / 2;
++        if (a > e || e > file - l) { free(out); return; }
++        if (!text)
++            while (chars && !b[l + a + 2 * chars - 2] && !b[l + a + 2 * chars - 1]) chars--;
++        if (pos + 2 * chars + 4 > file - l) { free(out); return; }
++        wr32(out + 16 + 4 * r, pos);
++        if (text)
++            for (uint32_t i = 0; i < chars; i++) out[pos + 2 * i] = (uint8_t)text[i];
++        else
++            memcpy(out + pos, b + l + a, 2 * chars);
++        pos += 2 * chars + 4;
++    }
++    memcpy(out, b + l, 16);
++    memcpy(b + l, out, file - l);
++    free(out);
++    printf("[TEXT] save messages: %zu rows changed\n", sizeof s_save_text / sizeof s_save_text[0]);
++}
++#endif
++
+ static void on_read(void *buf, size_t len, int64_t offset)
+ {
+     uint8_t *b = buf;
+@@ -205,12 +305,16 @@ static void on_read(void *buf, size_t len, int64_t offset)
+     for (; i + 32 <= len; i += LANG_ALIGN)
+         if (rd32(b + i) == LANG_CHUNK_ID)
+             patch_chunk(b + i, len - i);
++#if defined(NFSU2_PS5)
++        else if (s_switch_words && !memcmp(b + i, "LOCH", 4))
++            patch_save_text(b + i, len - i);
++#endif
+ }
+ 
+ void nfsu2_text_patch_init(void)
+ {
+     const char *e = getenv("NFSU2_SWITCH_TEXT");
+-#ifdef __SWITCH__
++#if defined(__SWITCH__) || defined(NFSU2_PS5)
+     int on = !(e && e[0] == '0');
+ #else
+     int on = e && e[0] == '1';
+diff --git a/xboxrecomp/src/kernel/kernel.h b/xboxrecomp/src/kernel/kernel.h
+index c0c0548..c00dd55 100644
+--- a/xboxrecomp/src/kernel/kernel.h
++++ b/xboxrecomp/src/kernel/kernel.h
+@@ -1106,3 +1106,5 @@ void xbox_log(int level, const char* subsystem, const char* fmt, ...);
+ #endif
+ 
+ #endif /* XBOX_KERNEL_H */
++
++BOOL xbox_ProtectGuestRange(PVOID,SIZE_T,DWORD,PDWORD);
+diff --git a/xboxrecomp/src/kernel/kernel_bridge.c b/xboxrecomp/src/kernel/kernel_bridge.c
+index acde5a7..044ace5 100644
+--- a/xboxrecomp/src/kernel/kernel_bridge.c
++++ b/xboxrecomp/src/kernel/kernel_bridge.c
+@@ -8279,7 +8279,7 @@ static void bridge_NtProtectVirtualMemory(void)
+     uint32_t size    = size_ptr ? BRIDGE_MEM32(size_ptr) : 0;
+     DWORD old = 0;
+ 
+-    if (VirtualProtect(XBOX_TO_NATIVE(base_va), size, (DWORD)new_prot, &old)) {
++    if (xbox_ProtectGuestRange(XBOX_TO_NATIVE(base_va), size, (DWORD)new_prot, &old)) {
+         if (old_ptr)
+             BRIDGE_MEM32(old_ptr) = (uint32_t)old;
+         g_eax = 0;  /* STATUS_SUCCESS */
+diff --git a/xboxrecomp/src/kernel/kernel_memory.c b/xboxrecomp/src/kernel/kernel_memory.c
+index e49a219..81389cd 100644
+--- a/xboxrecomp/src/kernel/kernel_memory.c
++++ b/xboxrecomp/src/kernel/kernel_memory.c
+@@ -200,10 +200,21 @@ ULONG __stdcall xbox_MmQueryAddressProtect(PVOID VirtualAddress)
+     return PAGE_NOACCESS;
+ }
+ 
++/* PS5: removing access must leave neighbouring 4 KiB guest pages alone. */
++BOOL xbox_ProtectGuestRange(PVOID base,SIZE_T size,DWORD protect,PDWORD old)
++{
++    uintptr_t page=0x4000,access=protect&255;
++    if(access==PAGE_NOACCESS || access==PAGE_READONLY || access==PAGE_EXECUTE || access==PAGE_EXECUTE_READ) {
++        uintptr_t start=((uintptr_t)base+page-1)&~(page-1),end=((uintptr_t)base+size)&~(page-1);
++        if(end<=start) { MEMORY_BASIC_INFORMATION mbi;if(old)*old=VirtualQuery(base,&mbi,sizeof mbi)?mbi.Protect:PAGE_READWRITE;return TRUE; }
++        return VirtualProtect((void *)start,end-start,protect,old);
++    }
++    return VirtualProtect(base,size,protect,old);
++}
+ VOID __stdcall xbox_MmSetAddressProtect(PVOID BaseAddress, ULONG NumberOfBytes, ULONG NewProtect)
+ {
+     DWORD old_protect;
+-    VirtualProtect(BaseAddress, NumberOfBytes, xbox_protect_to_win32(NewProtect), &old_protect);
++    xbox_ProtectGuestRange(BaseAddress, NumberOfBytes, xbox_protect_to_win32(NewProtect), &old_protect);
+     XBOX_TRACE(XBOX_LOG_MEM, "MmSetAddressProtect(%p, %u, 0x%X)", BaseAddress, NumberOfBytes, NewProtect);
+ }
+ 
+diff --git a/xboxrecomp/src/kernel/kernel_path.c b/xboxrecomp/src/kernel/kernel_path.c
+index dcb9fa4..edfcea7 100644
+--- a/xboxrecomp/src/kernel/kernel_path.c
++++ b/xboxrecomp/src/kernel/kernel_path.c
+@@ -42,6 +42,13 @@ typedef struct {
+ } path_rule;
+ 
+ static const path_rule s_rules[] = {
++    /* PS5: disc is read-only, the XDK's saves on partition 1 must be writable. */
++    { "\\Device\\Harddisk0\\Partition1\\UDATA\\", 1, "\\UserData", "/UserData" },
++    { "\\Device\\Harddisk0\\Partition1\\TDATA\\", 1, "\\TitleData", "/TitleData" },
++
++    { "\\Device\\Harddisk0\\Partition1\\UDATA", 1, "\\UserData", "/UserData" },
++    { "\\Device\\Harddisk0\\Partition1\\TDATA", 1, "\\TitleData", "/TitleData" },
++
+     { "\\Device\\CdRom0\\",                   0, NULL,         NULL          },
+     { "\\Device\\Harddisk0\\Partition1\\",    0, NULL,         NULL          },
+     /* The rest of the disk. Partition 0 is the whole raw device, 2 holds
+@@ -602,7 +609,7 @@ void xbox_path_init(const char* game_dir, const char* save_dir)
+             f = fopen(path, "ab");
+             if (f)
+                 fclose(f);
+-#if defined(__SWITCH__)
++#if defined(__SWITCH__) || defined(NFSU2_PS5)
+             continue;       /* exists; its size is reported from the table */
+ #endif
+             if (truncate(path, (off_t)(s_part_sectors[i] * 512ull)) != 0)
+diff --git a/xboxrecomp/src/kernel/xbox_memory_layout.c b/xboxrecomp/src/kernel/xbox_memory_layout.c
+index c1698f3..c2b904c 100644
+--- a/xboxrecomp/src/kernel/xbox_memory_layout.c
++++ b/xboxrecomp/src/kernel/xbox_memory_layout.c
+@@ -80,6 +80,7 @@ static void *g_mirror_views[XBOX_NUM_MIRRORS] = {0};
+  * whole range first, then carving views out of ground we hold, removes the
+  * question. */
+ static void *g_span_base = NULL;
++static void *g_extvma_memory = NULL;
+ static size_t g_span_size = 0;
+ static void *g_tiled_view = NULL;
+ 
+@@ -2178,10 +2179,10 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
+         /* Reserve base + mirrors as one range, and map the base at its head.
+          * VirtualFree releases just the slice about to be used, so each view
+          * replaces our own reservation rather than racing for free space. */
+-        g_span_size = g_memory_size * (size_t)(1 + XBOX_NUM_MIRRORS);
++        g_span_size = (size_t)1 << 32; /* PS5: reserve every guest aperture before fixed mappings. */
+         g_span_base = VirtualAlloc(NULL, g_span_size, MEM_RESERVE, PAGE_NOACCESS);
+         if (g_span_base) {
+-            VirtualFree(g_span_base, g_memory_size, MEM_RELEASE);
++            /* PS5: direct-memory views replace only our own reservation. */
+             g_memory_base = MapViewOfFileEx(g_mapping_handle,
+                                             FILE_MAP_ALL_ACCESS, 0, 0,
+                                             g_memory_size, g_span_base);
+@@ -2193,7 +2194,7 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
+         }
+ 
+         const size_t n_bases = sizeof(try_bases) / sizeof(try_bases[0]);
+-        for (size_t i = 0; !g_memory_base && i < n_bases; i++) {
++        for (size_t i = 0; !g_memory_base && i < 0; i++) { /* PS5 requires the full reservation. */
+             LPVOID hint = try_bases[i] ? (LPVOID)try_bases[i] : NULL;
+             g_memory_base = MapViewOfFileEx(
+                 g_mapping_handle,
+@@ -2954,7 +2955,7 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
+              * to use; outside it (no reservation) this is a no-op on an
+              * address we never held. */
+             if (g_span_base)
+-                VirtualFree((LPVOID)mirror_base, g_memory_size, MEM_RELEASE);
++                (void)mirror_base; /* reservation stays owned */
+             g_mirror_views[m] = MapViewOfFileEx(
+                 g_mapping_handle,
+                 FILE_MAP_ALL_ACCESS,
+@@ -3005,7 +3006,8 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
+         uint64_t extvma_size = (uint64_t)0x7FFE0000u - aliased_top;
+         void *extvma_base = (void *)((uintptr_t)g_memory_base + (uintptr_t)aliased_top);
+ 
+-        if (VirtualAlloc(extvma_base, (SIZE_T)extvma_size, MEM_RESERVE, PAGE_NOACCESS)) {
++        g_extvma_memory = VirtualAlloc(extvma_base, (SIZE_T)extvma_size, MEM_COMMIT, PAGE_READWRITE);
++        if (g_extvma_memory) {
+             g_xbox_extvma_reserved = 1;
+             fprintf(stderr, "  Extended VMA: reserved %llu MB at %p\n",
+                     (unsigned long long)(extvma_size / (1024 * 1024)), extvma_base);
+@@ -3195,6 +3197,7 @@ void xbox_MemoryLayoutShutdown(void)
+ 
+     /* Whatever is left of the base+mirrors reservation. The views carved out
+      * of it are already unmapped above; this releases the range itself. */
++    if (g_extvma_memory) { VirtualFree(g_extvma_memory,0,MEM_RELEASE);g_extvma_memory=NULL;g_xbox_extvma_reserved=0; }
+     if (g_span_base) {
+         VirtualFree(g_span_base, g_span_size, MEM_RELEASE);
+         g_span_base = NULL;
+diff --git a/xboxrecomp/src/nv2a_vk/nv2a_vk.c b/xboxrecomp/src/nv2a_vk/nv2a_vk.c
+index 6350102..91db97d 100644
+--- a/xboxrecomp/src/nv2a_vk/nv2a_vk.c
++++ b/xboxrecomp/src/nv2a_vk/nv2a_vk.c
+@@ -29,7 +29,7 @@
+  *   RECOMP_GL_TRACE=1                shader sources on compile errors
+  *   RECOMP_GL_SCALE=<k>              render surfaces at k times the title's
+  *                                    resolution, fractions allowed (1.5;
+- *                                    0.5..4, default 1)
++ *                                    0.5..4.5, default 1)
+  *   RECOMP_GL_SCALE_X=<k>            horizontal scale, if not the same
+  *   RECOMP_VK_SQUARE=0               widescreen without 4/3 more columns on
+  *                                    surfaces without horizontal AA
+@@ -53,8 +53,8 @@
+ #endif
+ #include <vulkan/vulkan.h>
+ #if !defined(__SWITCH__)
+-#include <SDL.h>
+-#include <SDL_vulkan.h>
++#include <SDL3/SDL.h>
++#include <SDL3/SDL_vulkan.h>
+ #endif
+ #include <glslang/Include/glslang_c_interface.h>
+ #include <glslang/Public/resource_limits_c.h>
+@@ -64,6 +64,9 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <time.h>
++#if defined(NFSU2_PS5)
++#include "hd_textures.h"
++#endif
+ 
+ extern ptrdiff_t xbox_GetMemoryOffset(void);
+ 
+@@ -785,6 +788,8 @@ static VkSurf *target(const Nv2aSurface *sf, uint32_t zeta_va, VkDepthBuf **dout
+ 
+ typedef struct {
+     uint32_t va, color, w, h, pitch, hash, bytes;
++    uint32_t image_w, image_h;
++    VkFormat guest_fmt;         /* what the guest texture alone would use */
+     uint32_t face;              /* cube map: bytes per face; 0 = 2D */
+     uint32_t levels;            /* mip levels in the image */
+     uint32_t palette_va, palette_reg;   /* format 0x0B: the palette it was decoded with */
+@@ -980,8 +985,8 @@ static void tex_copy_from_ring(VkTex *t, VkDeviceSize at, uint32_t row_texels,
+     rg.imageSubresource.mipLevel = level;
+     rg.imageSubresource.baseArrayLayer = layer;
+     rg.imageSubresource.layerCount = 1;
+-    rg.imageExtent.width = t->w >> level ? t->w >> level : 1;
+-    rg.imageExtent.height = t->h >> level ? t->h >> level : 1;
++    rg.imageExtent.width = t->image_w >> level ? t->image_w >> level : 1;
++    rg.imageExtent.height = t->image_h >> level ? t->image_h >> level : 1;
+     rg.imageExtent.depth = 1;
+     vkCmdCopyBufferToImage(s_cb, s_f->ring, t->image, VK_IMAGE_LAYOUT_GENERAL, 1, &rg);
+     s_transfer_pending = 1;
+@@ -1125,15 +1130,19 @@ static VkImageView tex_get(uint32_t va, uint32_t color, uint32_t w, uint32_t h,
+     uint32_t i, hash;
+     VkFormat fmt = VK_FORMAT_B8G8R8A8_UNORM;
+     uint32_t layers = face ? 6 : 1, f, size;
++    uint32_t image_w = w, image_h = h, image_levels = levels;
++    VkFormat guest_fmt;
++    void *hd_pixels = NULL;
+ 
+     if (s_have_bc && color == 0x0C) fmt = VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+     if (s_have_bc && color == 0x0E) fmt = VK_FORMAT_BC2_UNORM_BLOCK;
+     if (s_have_bc && color == 0x0F) fmt = VK_FORMAT_BC3_UNORM_BLOCK;
++    guest_fmt = fmt;
+ 
+     for (i = s_tex_head[tex_bucket(va, color, w, h)]; i; i = s_tex_next[i - 1]) {
+         VkTex *c = &s_tex[i - 1];
+         if (c->image && c->va == va && c->color == color && c->w == w && c->h == h
+-            && c->face == face && c->pitch == pitch && c->levels == levels && c->fmt == fmt
++            && c->face == face && c->pitch == pitch && c->levels == levels && c->guest_fmt == guest_fmt
+             && (color != 0x0B || (c->palette_va == s_palette_va && c->palette_reg == s_palette_reg))) {
+             t = c;
+             break;
+@@ -1167,6 +1176,22 @@ static VkImageView tex_get(uint32_t va, uint32_t color, uint32_t w, uint32_t h,
+     if (t && s_tex_changes)
+         fprintf(stderr, "[tex] frame %u: %08X format %02X %ux%u changed\n",
+                 s_frame, va, color, w, h);
++#if defined(NFSU2_PS5)
++    if (!face && (color == 0x0C || color == 0x0E || color == 0x0F)) {
++        uint32_t base = tex_bytes(color, w, h, pitch);
++        const NfsHdTexture *hd = nfsu2_hd_find((const uint8_t *)xbox_GetMemoryOffset() + va,
++                                               color, w, h, base, bytes_hash(va, base));
++        if (hd && (hd_pixels = nfsu2_hd_load(hd)) != NULL) {
++            image_w = hd->width; image_h = hd->height;
++            image_levels = s_mips ? full_levels(image_w, image_h) : 1;
++            fmt = VK_FORMAT_B8G8R8A8_UNORM;
++        }
++    }
++#endif
++    if (t && (t->fmt != fmt || t->image_w != image_w || t->image_h != image_h)) {
++        tex_free(t);
++        t = NULL;
++    }
+     if (!t) {
+         for (i = 0; i < VK_MAX_TEX; i++) {
+             VkTex *c = &s_tex[i];
+@@ -1178,14 +1203,16 @@ static VkImageView tex_get(uint32_t va, uint32_t color, uint32_t w, uint32_t h,
+             tex_free(t);
+         t->va = va; t->color = color; t->w = w; t->h = h; t->pitch = pitch; t->fmt = fmt;
+         t->face = face; t->levels = levels;
++        t->image_w = image_w; t->image_h = image_h; t->guest_fmt = guest_fmt;
+         t->palette_va = s_palette_va; t->palette_reg = s_palette_reg;
+         VT("texture %08X fmt %02X %ux%u pitch %u%s\n", va, color, w, h, pitch,
+            face ? " cube" : "");
+-        if (!make_image_ml(w, h, layers, levels, fmt,
++        if (!make_image_ml(image_w, image_h, layers, image_levels, fmt,
+                            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                            VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                            VK_IMAGE_ASPECT_COLOR_BIT, &t->image, &t->view, &t->mem)) {
+             memset(t, 0, sizeof *t);
++            free(hd_pixels);
+             return face ? s_dummy_cube_view : s_dummy_view;
+         }
+         tex_index_add(t);
+@@ -1196,12 +1223,17 @@ static VkImageView tex_get(uint32_t va, uint32_t color, uint32_t w, uint32_t h,
+     t->hash = hash;
+     t->used = t->checked = s_frame;
+ 
+-    for (f = 0; f < layers; f++)
+-        tex_fill(t, va + f * face, f);
+-    if (fmt == VK_FORMAT_B8G8R8A8_UNORM && levels > 1)
+-        gen_mips(t->image, w, h, levels, layers);
+-    size = fmt != VK_FORMAT_B8G8R8A8_UNORM ? tex_bytes(color, w, h, 0) : w * h * 4;
+-    if (levels > 1)
++    if (hd_pixels) {
++        tex_upload(t, hd_pixels, image_w * image_h * 4, 0, 0, 0);
++        free(hd_pixels);
++    } else {
++        for (f = 0; f < layers; f++)
++            tex_fill(t, va + f * face, f);
++    }
++    if (fmt == VK_FORMAT_B8G8R8A8_UNORM && image_levels > 1)
++        gen_mips(t->image, image_w, image_h, image_levels, layers);
++    size = fmt != VK_FORMAT_B8G8R8A8_UNORM ? tex_bytes(color, w, h, 0) : image_w * image_h * 4;
++    if (image_levels > 1)
+         size += size / 3;                   /* the mip chain */
+     tex_account(t, size * layers);
+     return t->view;
+@@ -1573,7 +1605,7 @@ static const char *cache_dir(void)
+ #if defined(__SWITCH__)
+     return "sdmc:/switch/nfsu2x/";
+ #else
+-    return "";
++    return "/data/nfsu2/PPSA99027/";
+ #endif
+ }
+ 
+@@ -2305,30 +2337,29 @@ static int ready(void)
+ #else
+     {
+         const char *e = getenv("RECOMP_VK_HEADLESS");
+-        const char *drv = getenv("SDL_VIDEODRIVER");
+-        s_headless = (e && *e == '1') || (drv && !strcmp(drv, "offscreen"));
++
++        s_headless = (e && *e == '1');
+         if (!s_headless) {
+-            if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
++            if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+                 s_headless = 1;
+             } else {
+-                s_win = SDL_CreateWindow("NV2A (Vulkan)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+-                                         1280, 720, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
++                int height = 2160, width = 3840;
++                const char *output = getenv("NFSU2_OUTPUT_HEIGHT");
++                if (output && !strcmp(output, "1080")) { width = 1920; height = 1080; }
++                else if (output && !strcmp(output, "1440")) { width = 2560; height = 1440; }
++                s_win = SDL_CreateWindow("Need for Speed Underground 2", width, height, SDL_WINDOW_VULKAN);
+                 if (!s_win) {
+                     s_headless = 1;
+                 } else {
+-                    unsigned int ne = 0;
+-                    const char *names[8];
+-                    SDL_Vulkan_GetInstanceExtensions(s_win, &ne, NULL);
+-                    if (ne > 6) ne = 6;
+-                    SDL_Vulkan_GetInstanceExtensions(s_win, &ne, names);
++                    Uint32 ne = 0;
++                    const char *const *names = SDL_Vulkan_GetInstanceExtensions(&ne);
++                    if (!names || ne > 8) return 0;
+                     niext = 0;
+-                    for (i = 0; i < ne; i++)
+-                        iext[niext++] = names[i];
++                    for (i = 0; i < ne; i++) iext[niext++] = names[i];
+                 }
+             }
+         }
+-        if (s_headless)
+-            niext = 0;
++        if (s_headless) { LOGE("PS5 display initialization failed: %s\n", SDL_GetError()); return 0; }
+     }
+     {
+         const char *v = getenv("RECOMP_VK_VALIDATION");
+@@ -2372,7 +2403,7 @@ static int ready(void)
+         if (pp.limits.maxFramebufferHeight < m) m = pp.limits.maxFramebufferHeight;
+         s_max_size = m ? m : 4096;
+         if (!(k > 0.0)) k = 1.0;                    /* unset, 0 or garbage */
+-        s_scale = k < 0.5 ? 0.5 : k > 4.0 ? 4.0 : k;
++        s_scale = k < 0.5 ? 0.5 : k > 4.5 ? 4.5 : k;
+         e = getenv("RECOMP_VK_SQUARE");
+         s_square_env = xbox_video_widescreen() && !(e && *e == '0');
+         e = getenv("RECOMP_GL_SCALE_X");
+@@ -2381,7 +2412,7 @@ static int ready(void)
+             s_square_env = 0;
+         s_square = s_square_env && nv2a_vk_square;
+         if (k > 0.0)
+-            s_xratio = (k < 0.5 ? 0.5 : k > 4.0 * 4.0 / 3.0 ? 4.0 * 4.0 / 3.0 : k) / s_scale;
++            s_xratio = (k < 0.5 ? 0.5 : k > 6.0 ? 6.0 : k) / s_scale;
+         s_scale_x = s_scale * s_xratio;
+         if (s_scale != 1.0 || s_scale_x != 1.0 || s_square)
+             fprintf(stderr, "  [VK] rendering at %g x %g (RECOMP_GL_SCALE[_X])%s, surfaces up to %u\n",
+@@ -2442,9 +2473,9 @@ static int ready(void)
+         }
+     }
+ #else
+-    if (!s_headless && !SDL_Vulkan_CreateSurface(s_win, s_inst, &s_surface)) {
++    if (!s_headless && !SDL_Vulkan_CreateSurface(s_win, s_inst, NULL, &s_surface)) {
+         LOGE("SDL_Vulkan_CreateSurface: %s\n", SDL_GetError());
+-        s_headless = 1;
++        return 0;
+     }
+ #endif
+ 
+@@ -2490,8 +2521,8 @@ static int ready(void)
+ #undef GET
+ 
+     if (!s_headless && !create_swapchain()) {
+-        LOGE("swapchain creation failed; running headless\n");
+-        s_headless = 1;
++        LOGE("PS5 swapchain creation failed\n");
++        return 0;
+     }
+ 
+     {
+@@ -4203,7 +4234,7 @@ static void vk_flip(void)
+     s_rt_depth = NULL;
+     {
+         int pct = nv2a_vk_scale_pct;
+-        double k = pct < 50 ? 0.0 : pct > 400 ? 4.0 : pct / 100.0;
++        double k = pct < 50 ? 0.0 : pct > 450 ? 4.5 : pct / 100.0;
+         int sq = s_square_env && nv2a_vk_square;
+         if (!(k > 0.0))
+             k = s_scale;
+@@ -4234,6 +4265,17 @@ static void vk_flip(void)
+     }
+     barrier_all();
+ 
++#if defined(NFSU2_PS5)
++    /* Record actual render dimensions, independently of requested scale/output. */
++    if (s && s_drew_any) {
++        static uint32_t last_w, last_h, last_pw, last_ph;
++        if (s->w != last_w || s->h != last_h || s->pw != last_pw || s->ph != last_ph) {
++            fprintf(stderr, "[PS5 picture] guest %ux%u, render %ux%u, output %ux%u\n",
++                    s->w, s->h, s->pw, s->ph, s_sc_extent.width, s_sc_extent.height);
++            last_w = s->w; last_h = s->h; last_pw = s->pw; last_ph = s->ph;
++        }
++    }
++#endif
+     VT("flip %u: surface %08X drew %d, acquiring\n", s_frame, s ? s->va : 0, s_drew_any);
+     present_drain();
+     if (!s_headless) {
+@@ -4364,3 +4406,6 @@ void nv2a_vk_install(void)
+     nv2a_backend_register(&s_backend);
+     fprintf(stderr, "[BOOT] NV2A Vulkan renderer registered\n");
+ }
++
++/* PS5: fail at boot when VideoOut or required Vulkan features are unavailable. */
++int nv2a_vk_prepare(void) { return ready(); }
+diff --git a/xboxrecomp/src/platform/win32_compat.c b/xboxrecomp/src/platform/win32_compat.c
+index 2a7a050..3e5b9f6 100644
+--- a/xboxrecomp/src/platform/win32_compat.c
++++ b/xboxrecomp/src/platform/win32_compat.c
+@@ -46,7 +46,9 @@
+ #include <sys/stat.h>
+ #include <mach/mach.h>
+ #include <mach/mach_vm.h>
+-#elif !defined(__SWITCH__)
++#elif defined(NFSU2_PS5)
++#include <sys/sysctl.h>
++#else
+ #include <sys/sysinfo.h>
+ #endif
+ 
+@@ -326,6 +328,8 @@ typedef struct w32_object {
+     /* file mapping / fd-backed file handle */
+     int             fd;
+     SIZE_T          map_size;
++    void           *mapping_payload;
++    void          (*mapping_release)(void *);
+     char           *file_path;
+ } w32_object;
+ 
+@@ -452,6 +456,7 @@ static void obj_release(w32_object *o)
+         if (o->fd >= 0) close(o->fd);
+         free(o->file_path);
+     } else if (o->kind == K_FILEMAP) {
++        if (o->mapping_release) o->mapping_release(o->mapping_payload);
+         if (o->fd >= 0) close(o->fd);
+     } else if (o->kind == K_WAITABLE_TIMER) {
+         /* Waitable timers: no special cleanup needed */
+@@ -882,6 +887,8 @@ void xbox_guest_pin(int interrupt)
+      * interrupt thread goes above it so it pre-empts guest threads. */
+     if (interrupt)
+         svcSetThreadPriority(CUR_THREAD_HANDLE, 0x2C);
++#elif defined(NFSU2_PS5)
++    { extern int scePthreadSetaffinity(unsigned long,unsigned long); scePthreadSetaffinity((unsigned long)pthread_self(),1ul<<core); }
+ #else
+     {
+         cpu_set_t set;
+@@ -1738,7 +1745,7 @@ BOOL VirtualProtect(LPVOID address, SIZE_T size, DWORD newProtect, PDWORD oldPro
+     if (oldProtect) *oldProtect = PAGE_READWRITE;
+     return TRUE;
+ }
+-#else
++#elif !defined(NFSU2_PS5)
+ static int prot_from_page(DWORD protect)
+ {
+     switch (protect & 0xFF) {
+@@ -1993,7 +2000,7 @@ VOID SecureZeroMemory(PVOID ptr, SIZE_T cnt)
+ #if defined(__APPLE__)
+     memset_s(ptr, cnt, 0, cnt);
+ #else
+-    explicit_bzero(ptr, cnt);
++    volatile unsigned char *p = ptr; while (cnt--) *p++ = 0;
+ #endif
+ }
+ 
+@@ -2396,7 +2403,7 @@ BOOL UnmapViewOfFile(LPCVOID baseAddr)
+ {
+     return VirtualFree((LPVOID)baseAddr, 0, MEM_RELEASE);
+ }
+-#else
++#elif !defined(NFSU2_PS5)
+ /* An unnamed file descriptor that ftruncate and mmap both accept. Linux has
+  * memfd_create for this; elsewhere an immediately-unlinked temp file does. */
+ static int anon_map_fd(const char *name)
+@@ -2527,6 +2534,7 @@ BOOL UnmapViewOfFile(LPCVOID baseAddr)
+  * honest answer: a host heap pointer is not a Win32 reservation, and the
+  * callers that branch on this want to know which allocator owns the pointer.
+  */
++#if !defined(NFSU2_PS5)
+ SIZE_T VirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buffer, SIZE_T length)
+ {
+     if (!buffer || length < sizeof(*buffer)) return 0;
+@@ -2557,6 +2565,7 @@ SIZE_T VirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buffer, SIZE_T le
+     buffer->Type             = MEM_PRIVATE;
+     return sizeof(*buffer);
+ }
++#endif
+ 
+ BOOL GlobalMemoryStatusEx(LPMEMORYSTATUSEX b)
+ {
+@@ -2571,6 +2580,11 @@ BOOL GlobalMemoryStatusEx(LPMEMORYSTATUSEX b)
+         b->ullTotalPageFile = b->ullTotalPhys;
+         b->ullAvailPageFile = b->ullAvailPhys;
+     }
++#elif defined(NFSU2_PS5)
++    uint64_t total = 0; size_t n = sizeof total;
++    if (sysctlbyname("hw.physmem", &total, &n, NULL, 0)) return FALSE;
++    b->ullTotalPhys = total; b->ullAvailPhys = total / 2;
++    b->ullTotalPageFile = total; b->ullAvailPageFile = total / 2;
+ #elif defined(__APPLE__)
+     /* Darwin has no sysinfo(2): physical memory comes from sysctl hw.memsize,
+      * swap from vm.swapusage, the free page count from the Mach VM statistics. */
+@@ -2758,3 +2772,17 @@ PVOID AddVectoredExceptionHandler(ULONG First, PVECTORED_EXCEPTION_HANDLER Handl
+ ULONG RemoveVectoredExceptionHandler(PVOID h) { (void)h; return 1; }
+ 
+ #endif /* !_WIN32 */
++
++
++HANDLE w32_direct_mapping_handle(void *payload, void (*release)(void *))
++{
++    w32_object *o = obj_alloc(K_FILEMAP);
++    if (!o) return NULL;
++    o->fd = -1; o->mapping_payload = payload; o->mapping_release = release;
++    return (HANDLE)o;
++}
++void *w32_direct_mapping_payload(HANDLE h)
++{
++    w32_object *o = obj_from(h);
++    return o && o->kind == K_FILEMAP ? o->mapping_payload : NULL;
++}
+diff --git a/xboxrecomp/src/platform/win32_compat.h b/xboxrecomp/src/platform/win32_compat.h
+index 5b21270..9403e38 100644
+--- a/xboxrecomp/src/platform/win32_compat.h
++++ b/xboxrecomp/src/platform/win32_compat.h
+@@ -573,3 +573,6 @@ static inline MMRESULT waveOutClose(HWAVEOUT h) { (void)h; return MMSYSERR_NOERR
+ 
+ #endif /* !_WIN32 */
+ #endif /* WIN32_COMPAT_H */
++
++HANDLE w32_direct_mapping_handle(void *, void (*)(void *));
++void *w32_direct_mapping_payload(HANDLE);

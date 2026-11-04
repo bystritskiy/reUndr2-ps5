@@ -1,0 +1,5 @@
+numpy
+pillow>=13
+cairosvg
+etcpak==0.9.15
+texture2ddecoder==1.0.6

@@ -1,0 +1,9 @@
+/source/
+/upstream/
+/build/
+/dist/
+/.venv/
+.DS_Store
+__pycache__/
+
+/logs/
