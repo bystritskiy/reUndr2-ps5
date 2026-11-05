@@ -4,8 +4,7 @@
 
 <p align="center">
   <b>Need for Speed: Underground 2, the original Xbox version, statically recompiled<br>
-  into a native app for homebrew-enabled PS5 consoles.<br>
-  Not an emulator. Bring your own disc.</b>
+  into a native app for homebrew-enabled PS5 consoles.</b>
 </p>
 
 <p align="center">
@@ -24,27 +23,21 @@
   <a href="#reporting-a-bug">Report a bug</a>
 </p>
 
+> [!IMPORTANT]
+> **Bring your own game.**
+> This project does not include or distribute copyrighted game files. Use a dump of your own original disc.
+> Please do not request or share game downloads here.
+
 <p align="center">
   <img src="docs/media/race.jpg" alt="Driving through Bayview at night with the HUD, minimap and speedometer" width="100%">
   <br>
   <sub>Driving through Bayview on the PS5, rendered at 3840x2160.</sub>
 </p>
 
-> [!IMPORTANT]
-> **reUndr 2 is an unofficial fan project.** It is based on
-> [antoxa2584x/nfsu2-sw](https://github.com/antoxa2584x/nfsu2-sw), the Nintendo Switch port, and
-> is not made by its author. It is not affiliated with, endorsed by or sponsored by Electronic
-> Arts Inc., Microsoft or Sony Interactive Entertainment.
->
-> **No game files are included or distributed.** To play, you need your own legally obtained
-> backup of your own Xbox disc of *Need for Speed: Underground 2*, USA version. Please don't ask
-> for, or share, game files or disc images.
-
 ## What it is
 
-The Xbox game's own code, translated into C ahead of time and compiled for the PS5, with a runtime
-that stands in for the console. The app holds nothing from the game: it plays the files of your own
-disc and leaves them as they are.
+The Xbox game's code is translated into C ahead of time and compiled for the PS5.
+A replacement runtime handles the original console's graphics, audio, input and system services.
 
 ## Highlights
 
@@ -130,7 +123,7 @@ merges two controllers into one, doesn't add a player. Split screen: main menu â
 
 **Options â†’ Video** has **Car Reflections**, **Resolution Scale** (`1x`, `1.5x`, `2x`, `2.5x`,
 `3x`, `4.5x`), **Anti-Aliasing** (FXAA), **Anisotropic** (`Off`, `2x`, `4x`, `8x`, `16x`) and
-**Square Pixels**. What you save there wins over the file below.
+**Square Pixels**. Settings saved in the game override the configuration file below.
 
 `/data/nfsu2/PPSA99027/nfsu2_env.txt` is optional and holds `KEY=VALUE` lines read at start:
 
@@ -199,7 +192,7 @@ here.
 
 ## Legal notice
 
-This is a non-commercial fan project with no connection to the rights holders. "Need for Speed" and
+This is an unofficial, non-commercial fan project, independent of the upstream authors and rights holders. "Need for Speed" and
 "Underground" are trademarks of Electronic Arts Inc. Xbox is a trademark of Microsoft Corporation.
 PlayStation, PS5 and DualSense are trademarks of Sony Interactive Entertainment Inc. All other
 trademarks belong to their respective owners.
