@@ -87,6 +87,9 @@ them belongs to its owners.</sub>
 
 ## Install
 
+You can also install the app from [RecompStore](https://recompstore.com/game/PPSA99027) or [ProsperoStore](https://prosperostore.net/app/PPSA99027/).
+You still need to provide your own disc files as described below.
+
 1. **The app.** Download `PPSA99027-<version>.zip` from
    [Releases](../../releases/latest), unpack it, and copy the `PPSA99027` folder to
    `/data/homebrew/` on the console. The **reUndr 2** tile appears on the home screen.
