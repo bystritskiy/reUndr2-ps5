@@ -4,6 +4,7 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
 llvm=${LLVM_BIN:-/opt/homebrew/opt/llvm@18/bin}
 sdk="$root/build/deps/PS5_Vulkan/.deps/native/ps5-payload-sdk"
+[ -f build/dav1d/obj/src/libdav1d.a ] || python3 tools/build-dav1d.py
 python3 tools/gen-vulkan-shim.py build/deps/PS5_Mesa/include/vulkan/vulkan_core.h build/vulkan_shim.c
 cmake -S ps5 -B build/ps5 -G Ninja \
  -DCMAKE_TOOLCHAIN_FILE="$root/ps5/cmake/ps5.cmake" \

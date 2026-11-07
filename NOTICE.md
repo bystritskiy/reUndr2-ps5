@@ -12,6 +12,10 @@ and the upstream MIT/LGPL, SDL zlib, glslang and SPIR-V notices accompany the
 local build. Mesa contains several licences; its complete `licenses/` folder
 and `docs/license.rst` accompany the build.
 
+dav1d (BSD-2-Clause) decodes upscaled movie packs when a local build has
+them; it is cross-compiled unmodified by `tools/build-dav1d.py`, and its
+licence accompanies the build.
+
 Source revisions and repositories are listed in `ps5/dependencies.json`.
 Downloaded source stays in `build/deps/`. NFSU2 modifications stay in the
 published host/runtime files and scripts; generated game C is unchanged.

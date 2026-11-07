@@ -71,7 +71,7 @@ done
     "$build/CMakeFiles/nfsu2_start.dir/src/native_start.c.o" "$(find "$build/CMakeFiles/nfsu2_start.dir" -name vulkan_shim.c.o -print -quit)" "$work/obj/cpp-runtime.o" \
     "$work/stubs/libSceAgc.so" "$work/stubs/libSceAgcDriver.so" \
     --start-group "$build/libnfsu2_game.a" "$build/libnfsu2_runtime.a" "$build/libnfsu2_host.a" \
-    "$root/build/sdl3/libSDL3.a" "${shaders[@]}" "${inputs[@]}" \
+    "$root/build/sdl3/libSDL3.a" "$root/build/dav1d/obj/src/libdav1d.a" "${shaders[@]}" "${inputs[@]}" \
     "$sdk/target/lib/libc.a" "$sdk/target/lib/libpthread.a" --end-group \
     --as-needed "${stubs[@]}"
 llvm-readelf-18 --dyn-syms --wide "$work/llvm-pie.elf" > "$work/imports.txt"

@@ -66,7 +66,7 @@ def main():
   'xboxrecomp-MIT.txt':'upstream/xboxrecomp/LICENSE','xboxrecomp-NOTICE.txt':'upstream/xboxrecomp/NOTICE',
   'xemu-LGPL.txt':'upstream/xboxrecomp/LICENSES/LGPL-2.1.txt','SDL3-zlib.txt':'build/deps/sdl3/LICENSE.txt',
   'glslang.txt':'build/deps/glslang/LICENSE.txt','SPIRV-Tools-Apache.txt':'build/deps/spirv-tools/LICENSE',
-  'SPIRV-Headers.txt':'build/deps/spirv-headers/LICENSE','PS5-Vulkan-GPL.txt':'build/deps/PS5_Vulkan/LICENSE',
+  'SPIRV-Headers.txt':'build/deps/spirv-headers/LICENSE','dav1d-BSD.txt':'build/deps/dav1d/COPYING','PS5-Vulkan-GPL.txt':'build/deps/PS5_Vulkan/LICENSE',
   'PS5-Vulkan-NOTICE.txt':'build/deps/PS5_Vulkan/NOTICE.md','PS5-PayloadSDK.txt':'build/deps/PS5_PayloadSDK/LICENSE',
   'Mesa-license.txt':'build/deps/PS5_Mesa/docs/license.rst'}.items():
   shutil.copy2(ROOT/source,notices/label)

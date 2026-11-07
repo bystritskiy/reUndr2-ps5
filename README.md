@@ -140,6 +140,7 @@ merges two controllers into one, doesn't add a player. Split screen: main menu â
 | `RECOMP_AUDIO_VOLUME` | 50 | volume |
 | `RECOMP_FPS_LOG` | 0 | fps in the log every 10 seconds |
 | `NFSU2_HD` | 1 | 0 turns the HD textures off, and the PlayStation prompts with them |
+| `NFSU2_FMV` | 1 | 0 plays movies from the disc even when the app has upscaled movie packs |
 
 ## Your files
 
@@ -154,7 +155,8 @@ images.**
 
 ## For developers
 
-Build on macOS with Python 3, LLVM 18, CMake, Ninja and Docker. The game's C code is made from your
+Build on macOS with Python 3, LLVM 18, CMake, Ninja, Meson, NASM and Docker; the tests also need
+Homebrew's dav1d, FFmpeg and SVT-AV1. The game's C code is made from your
 own disc, unpacked to `source/Need for Speed Underground 2`:
 
 ```sh
@@ -171,6 +173,11 @@ python3 tools/test.py                                  # tests under ASan and UB
 Exact revisions are in `ps5/dependencies.json`, changes to upstream in `ps5/upstream.patch`. The
 public package is checked against a list of allowed files, and the HD art in it is drawn from
 vectors and strokes, with nothing taken from the disc's pixels.
+
+A local build may add upscaled movies as `hd/fmv/HASH.fmv`, HASH being the ZDIR hash of the movie's
+path: AV1 frames that `ps5/src/fmv_replace.c` shows in place of the frames the game decodes, so the
+game keeps its own sound, timing and 16:9 crop. They are made from the disc's movies, so no release
+carries them.
 
 ## Credits
 

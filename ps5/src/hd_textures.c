@@ -130,3 +130,51 @@ void *nfsu2_hd_load(const NfsHdTexture *t)
     fprintf(stderr,"[HD] %ux%u -> %ux%u %s\n",t->source_w,t->source_h,t->width,t->height,t->file);
     return pixels;
 }
+
+/* hd/wide.txt (NFSU2_HD_DIR first): one sampled hash per line, in hex, the same
+ * hash as the texture's in manifest.bin. */
+#define MAX_WIDE 32
+static uint32_t wide[MAX_WIDE];
+static unsigned wide_count;
+
+static void load_wide(const char *dir)
+{
+    char path[320], line[64];
+    snprintf(path,sizeof path,"%s/wide.txt",dir);
+    FILE *f=fopen(path,"r");
+    if (!f) return;
+    while (wide_count<MAX_WIDE && fgets(line,sizeof line,f)) {
+        char *end;
+        unsigned long v=strtoul(line,&end,16);
+        if (end!=line) wide[wide_count++]=(uint32_t)v;
+    }
+    fclose(f);
+    fprintf(stderr,"[HD] %u wide backdrops\n",wide_count);
+}
+
+static uint32_t sampled(const unsigned char *mem,uint32_t bytes)
+{
+    uint32_t h=2166136261u^bytes,step=bytes/256,i,w;
+    if (step<4) step=4;
+    step&=~3u;
+    for (i=0;i+4<=bytes;i+=step) { memcpy(&w,mem+i,4); h=(h^w)*16777619u; }
+    memcpy(&w,mem+bytes-4,4);
+    return (h^w)*16777619u;
+}
+
+int nfsu2_hd_wide(const void *source,uint32_t bytes)
+{
+    static int loaded;
+    if (!loaded) {
+        loaded=1;
+        const char *enabled=getenv("NFSU2_HD");
+        if (enabled && !strcmp(enabled,"0")) return 0;
+        const char *outside=getenv("NFSU2_HD_DIR");
+        if (outside && *outside) load_wide(outside);
+        if (!wide_count) load_wide(NFS_HD_ROOT);
+    }
+    if (!wide_count || bytes<4) return 0;
+    const uint32_t h=sampled(source,bytes);
+    for (unsigned i=0;i<wide_count;i++) if (wide[i]==h) return 1;
+    return 0;
+}

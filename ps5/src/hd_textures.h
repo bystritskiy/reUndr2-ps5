@@ -10,4 +10,7 @@ const NfsHdTexture *nfsu2_hd_find(const void *source, uint32_t color,
                                 uint32_t w, uint32_t h, uint32_t bytes,
                                 uint32_t sample_hash);
 void *nfsu2_hd_load(const NfsHdTexture *texture);
+/* Nonzero for a texture listed in hd/wide.txt: a 4:3 backdrop whose replacement
+ * is drawn 16:9, so upstream/src/movie_crop.c widens its quad to the screen. */
+int nfsu2_hd_wide(const void *source, uint32_t bytes);
 #endif

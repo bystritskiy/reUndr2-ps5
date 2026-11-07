@@ -28,6 +28,10 @@
     "spirv-headers": [
       "https://github.com/KhronosGroup/SPIRV-Headers.git",
       "01e0577914a75a2569c846778c2f93aa8e6feddd"
+    ],
+    "dav1d": [
+      "https://github.com/videolan/dav1d.git",
+      "54706fc6bc0cdecab7e9593974a4039cc038fca7"
     ]
   },
   "meson": "1.9.0",
