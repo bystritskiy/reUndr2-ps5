@@ -7,7 +7,7 @@ headers=out/'include';headers.mkdir(exist_ok=True)
 api=headers/'ps5platform'
 if not api.exists(): api.symlink_to((root/'build/deps/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/ps5platform').resolve())
 common=[shutil.which('clang'),'-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer','-pthread','-DNFSU2_PS5=1','-I'+str(root/'ps5/compat'),'-I'+str(root/'ps5/src'),'-I'+str(root/'upstream/xboxrecomp/src'),'-I'+str(headers)]
-for name,sources in [('path',['upstream/xboxrecomp/src/kernel/kernel_path.c']),('xbe_check',['ps5/src/xbe_check.c','ps5/src/sha256.c']),('disc_image',['ps5/src/disc_image.c']),('hd',['ps5/src/hd_textures.c']),('fmv',['ps5/src/fmv_replace.c','ps5/src/fmv_video.c']),('pad',['ps5/src/pad_map.c']),('input',['ps5/src/input_ps5.c','ps5/src/pad_map.c']),('audio',['ps5/src/audio_ps5.c']),('memory',['ps5/src/memory_ps5.c','upstream/xboxrecomp/src/kernel/guest_vmem.c'])]:
+for name,sources in [('path',['upstream/xboxrecomp/src/kernel/kernel_path.c']),('xbe_check',['ps5/src/xbe_check.c','ps5/src/sha256.c']),('disc_image',['ps5/src/disc_image.c']),('hd',['ps5/src/hd_textures.c']),('fmv',['ps5/src/fmv_replace.c','ps5/src/fmv_video.c']),('pad',['ps5/src/pad_map.c']),('input',['ps5/src/input_ps5.c','ps5/src/pad_map.c']),('audio',['ps5/src/audio_ps5.c']),('audio_surround',['ps5/src/audio_ps5.c']),('audio_native',['ps5/src/audio_native.c']),('audio_enhance',[]),('apu_surround',['upstream/xboxrecomp/src/apu/apu_dsp.c']),('memory',['ps5/src/memory_ps5.c','upstream/xboxrecomp/src/kernel/guest_vmem.c'])]:
     binary=out/name
     extra=[]
     if name in ('hd','fmv'):
@@ -23,6 +23,9 @@ for name,sources in [('path',['upstream/xboxrecomp/src/kernel/kernel_path.c']),(
     result=subprocess.run([str(binary)],capture_output=True,text=True,timeout=25)
     (out/f'{name}.log').write_text(result.stdout+result.stderr)
     print(result.stdout+result.stderr,end='');result.check_returncode()
+    if name=='audio_surround':
+        result=subprocess.run([str(binary),'fallback'],capture_output=True,text=True,timeout=25)
+        print(result.stdout+result.stderr,end='');result.check_returncode()
     if name in ('hd','fmv'):
         result=subprocess.run([str(binary),'invalid'],capture_output=True,text=True,timeout=25)
         print(result.stdout+result.stderr,end='');result.check_returncode()

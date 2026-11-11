@@ -141,7 +141,7 @@ index a512c38..49c9068 100644
      nv2a_raw_batch_hook = movie_hook;
  }
 diff --git a/src/recomp_manual.c b/src/recomp_manual.c
-index 041bfeb..203c645 100644
+index 041bfeb..53ced29 100644
 --- a/src/recomp_manual.c
 +++ b/src/recomp_manual.c
 @@ -584,9 +584,16 @@ static void vp6_check(uint32_t dec, uint32_t data, uint32_t size)
@@ -208,7 +208,18 @@ index 041bfeb..203c645 100644
  #  define NFSU2_OPTIONS_FILE "sdmc:/switch/nfsu2x/nfsu2x_options.txt"
  #else
  #  define NFSU2_OPTIONS_FILE "nfsu2x_options.txt"
-@@ -1780,7 +1800,8 @@ extern void sub_000B51A0_gen(void);
+@@ -1775,12 +1795,19 @@ extern uint32_t xbox_ContiguousAlloc(uint32_t size, uint32_t alignment);
+ extern volatile int usb_gamepad_rumble_pct;
+ extern void sub_000CE8D0_gen(void);
+ extern void sub_000CEA00_gen(void);
++#ifdef NFSU2_PS5
++extern void sub_000CE680_gen(void);
++/* ps5/src/audio_ps5.c */
++extern void nfsu2_audio_set_spread(int on);
++extern void nfsu2_audio_set_test(int channel);
++#endif
+ extern void sub_000B5140_gen(void);
+ extern void sub_000B51A0_gen(void);
  extern void sub_0009B720_gen(void);
  extern void sub_00076A70_gen(void);
  
@@ -218,7 +229,46 @@ index 041bfeb..203c645 100644
  static const int s_aniso_lvl[] = { 1, 2, 4, 8, 16 };
  
  /* Options -> Audio rows, top to bottom. */
-@@ -1842,6 +1863,7 @@ static void picture_changed(void)
+@@ -1801,6 +1828,10 @@ static int s_fxaa = 1;                  /* 0 off, 1 on */
+ static int s_aniso_idx = 4;             /* into s_aniso_lvl: 16x */
+ static int s_square = 1;                /* 0 off, 1 on */
+ static int s_vib_idx = 10;              /* vibration in 10% steps: 100% */
++#ifdef NFSU2_PS5
++static int s_speakers = 1;              /* Multichannel Sound: 0 off, 1 on */
++static int s_speaker_test;              /* 0 off, 1..8 one channel, 9 walk */
++#endif
+ 
+ typedef struct {
+     uint32_t label;                     /* text hashes, see text_patch.c */
+@@ -1809,8 +1840,11 @@ typedef struct {
+     int *value;
+     void (*changed)(void);
+     uint32_t vtable;                    /* guest copy of ROW_VTABLE */
+-    int gameplay;                       /* on the Gameplay screen, not Video */
++    int screen;                         /* SCREEN_VIDEO, _GAMEPLAY, _AUDIO */
+ } OptRow;
++#define SCREEN_VIDEO    0
++#define SCREEN_GAMEPLAY 1
++#define SCREEN_AUDIO    2
+ 
+ static void refl_changed(void)
+ {
+@@ -1824,6 +1858,14 @@ static void vib_changed(void)
+     usb_gamepad_rumble_pct = s_vib_idx * 10;
+ }
+ 
++#ifdef NFSU2_PS5
++static void speakers_changed(void)
++{
++    nfsu2_audio_set_spread(s_speakers);
++    nfsu2_audio_set_test(s_speaker_test);
++}
++#endif
++
+ #ifdef NFSU2_VULKAN
+ static void scale_changed(void)
+ {
+@@ -1842,6 +1884,7 @@ static void picture_changed(void)
  static const uint32_t s_refl_texts[] = { 0x0000CCFAu, 0x0000063Cu };    /* Off, On */
  static const uint32_t s_scale_texts[] = {
      0x2A2A4AB3u, 0x822E4E9Bu, 0xB55E7665u, 0xD3588630u,                 /* 1x .. 2.5x */
@@ -226,16 +276,82 @@ index 041bfeb..203c645 100644
  };
  static const uint32_t s_aniso_texts[] = {
      0x0000CCFAu, 0xB55E7665u, 0xA7A683ACu, 0x6F2C7417u, 0x62925361u,    /* Off, 2x .. 16x */
-@@ -1854,7 +1876,7 @@ static const uint32_t s_vib_texts[] = {
+@@ -1851,20 +1894,37 @@ static const uint32_t s_vib_texts[] = {
+     0xBDE2E94Bu, 0x2522A4E9u, 0xF6A08779u, 0x4DEAB931u, 0x92423B95u,    /* 50% .. 90% */
+     0x14D4BD3Bu,                                                        /* 100% */
+ };
++#ifdef NFSU2_PS5
++static const uint32_t s_test_texts[] = {
++    0x0000CCFAu,                                                        /* Off */
++    0x1F182080u, 0x7EADFD76u, 0xB7D33921u, 0xBD7BA1AAu,                 /* Front L/R, Centre, Subwoofer */
++    0x2408AD3Du, 0x0928B181u, 0xE590F5A3u, 0x038A6E08u,                 /* Surround L/R, Back L/R */
++    0xB19F8A18u,                                                        /* Walk */
++};
++#endif
  static OptRow s_rows[] = {
-     { 0x8FE9288Eu, s_refl_texts, 2, &s_refl, refl_changed, 0, 0 },     /* Car Reflections */
+-    { 0x8FE9288Eu, s_refl_texts, 2, &s_refl, refl_changed, 0, 0 },     /* Car Reflections */
++    { 0x8FE9288Eu, s_refl_texts, 2, &s_refl, refl_changed, 0, SCREEN_VIDEO },     /* Car Reflections */
  #ifdef NFSU2_VULKAN
 -    { 0x4AC50BCFu, s_scale_texts, 4, &s_scale_idx, scale_changed, 0, 0 }, /* Resolution Scale */
-+    { 0x4AC50BCFu, s_scale_texts, N_SCALES, &s_scale_idx, scale_changed, 0, 0 }, /* Resolution Scale */
-     { 0x4CD775ACu, s_refl_texts, 2, &s_fxaa, picture_changed, 0, 0 },  /* Anti-Aliasing */
-     { 0x4E57D355u, s_aniso_texts, 5, &s_aniso_idx, picture_changed, 0, 0 }, /* Anisotropic */
-     { 0xA9C27DFDu, s_refl_texts, 2, &s_square, picture_changed, 0, 0 }, /* Square Pixels */
-@@ -1911,7 +1933,7 @@ void nfsu2_options_load(void)
+-    { 0x4CD775ACu, s_refl_texts, 2, &s_fxaa, picture_changed, 0, 0 },  /* Anti-Aliasing */
+-    { 0x4E57D355u, s_aniso_texts, 5, &s_aniso_idx, picture_changed, 0, 0 }, /* Anisotropic */
+-    { 0xA9C27DFDu, s_refl_texts, 2, &s_square, picture_changed, 0, 0 }, /* Square Pixels */
++    { 0x4AC50BCFu, s_scale_texts, N_SCALES, &s_scale_idx, scale_changed, 0, SCREEN_VIDEO }, /* Resolution Scale */
++    { 0x4CD775ACu, s_refl_texts, 2, &s_fxaa, picture_changed, 0, SCREEN_VIDEO },  /* Anti-Aliasing */
++    { 0x4E57D355u, s_aniso_texts, 5, &s_aniso_idx, picture_changed, 0, SCREEN_VIDEO }, /* Anisotropic */
++    { 0xA9C27DFDu, s_refl_texts, 2, &s_square, picture_changed, 0, SCREEN_VIDEO }, /* Square Pixels */
++#endif
++    { 0x5CF08EB7u, s_vib_texts, 11, &s_vib_idx, vib_changed, 0, SCREEN_GAMEPLAY }, /* Vibration */
++#ifdef NFSU2_PS5
++    { 0x9BA134FCu, s_refl_texts, 2, &s_speakers, speakers_changed, 0, SCREEN_AUDIO },      /* Multichannel Sound */
++    { 0xB7D0D273u, s_test_texts, 10, &s_speaker_test, speakers_changed, 0, SCREEN_AUDIO }, /* Speaker Test */
+ #endif
+-    { 0x5CF08EB7u, s_vib_texts, 11, &s_vib_idx, vib_changed, 0, 1 },   /* Vibration */
+ };
+ #define N_ROWS ((int)(sizeof s_rows / sizeof s_rows[0]))
+ 
+ static void options_log(void)
+ {
++#ifdef NFSU2_PS5
++    static const char *const tests[] = { "off", "FL", "FR", "C", "LFE", "LS", "RS", "BL", "BR", "walk" };
++    fprintf(stderr, "[options] multichannel sound %s, speaker test %s\n",
++            s_speakers ? "on" : "off", tests[s_speaker_test]);
++#endif
+ #ifdef NFSU2_VULKAN
+     fprintf(stderr, "[options] car reflections %s, resolution scale %d%%%s, anti-aliasing %s,"
+             " anisotropic %dx, square pixels %s, vibration %d%%\n",
+@@ -1883,6 +1943,19 @@ void nfsu2_options_load(void)
+     FILE *f = fopen(NFSU2_OPTIONS_FILE, "r");
+     int i;
+ 
++#ifdef NFSU2_PS5
++    {
++        /* nfsu2_env.txt gives the defaults; what is saved from the menu wins. */
++        const char *e = getenv("NFSU2_AUDIO_SPREAD");
++        if (e && *e)
++            s_speakers = atoi(e) != 0;
++        e = getenv("NFSU2_AUDIO_TEST");
++        if (e && *e) {
++            int t = atoi(e);
++            s_speaker_test = t >= 0 && t <= 9 ? t : 0;
++        }
++    }
++#endif
+     if (f) {
+         while (fgets(line, sizeof line, f)) {
+             char *eq = strchr(line, '=');
+@@ -1903,6 +1976,10 @@ void nfsu2_options_load(void)
+             }
+             else if (!strncmp(line, "square=", 7))
+                 s_square = line[7] != '0';
++#ifdef NFSU2_PS5
++            else if (!strncmp(line, "speakers=", 9))
++                s_speakers = line[9] != '0';
++#endif
+             else if (!strncmp(line, "aniso=", 6)) {
+                 int a = atoi(line + 6);
+                 for (i = 0; i < 5; i++)
+@@ -1911,7 +1988,7 @@ void nfsu2_options_load(void)
              }
              else if (!strncmp(line, "scale=", 6)) {
                  int pct = atoi(line + 6);
@@ -244,7 +360,17 @@ index 041bfeb..203c645 100644
                      if (s_scale_pct[i] == pct) {
                          s_scale_idx = i;
                          s_scale_saved = 1;
-@@ -1929,7 +1951,7 @@ void nfsu2_options_load(void)
+@@ -1922,6 +1999,9 @@ void nfsu2_options_load(void)
+     }
+     refl_changed();
+     vib_changed();
++#ifdef NFSU2_PS5
++    speakers_changed();
++#endif
+ #ifdef NFSU2_VULKAN
+     {
+         const char *e = getenv("RECOMP_GL_SCALE");
+@@ -1929,7 +2009,7 @@ void nfsu2_options_load(void)
              /* RECOMP_GL_SCALE stays in charge until the option is changed;
               * the row shows the nearest step. */
              double k = strtod(e, NULL), best = 1e9;
@@ -253,8 +379,72 @@ index 041bfeb..203c645 100644
                  double d = fabs(k * 100.0 - s_scale_pct[i]);
                  if (d < best) { best = d; s_scale_idx = i; }
              }
+@@ -1951,6 +2031,9 @@ static void options_save(void)
+         return;
+     }
+     fprintf(f, "reflections=%d\nvibration=%d\n", s_refl, s_vib_idx * 10);
++#ifdef NFSU2_PS5
++    fprintf(f, "speakers=%d\n", s_speakers);   /* Speaker Test is never kept */
++#endif
+     if (s_scale_saved)
+         fprintf(f, "scale=%d\n", s_scale_pct[s_scale_idx]);
+ #ifdef NFSU2_VULKAN
+@@ -1987,16 +2070,16 @@ static void refl_views(void)
+             MEM8(v + 8) = 0;
+ }
+ 
+-/* Appends our rows for one screen (gameplay 0 = Video, 1 = Gameplay) to
+- * an options screen, as its constructor adds its own. */
+-static void add_rows(uint32_t screen, int gameplay)
++/* Appends our rows for one screen (SCREEN_*) to an options screen, as its
++ * constructor adds its own. */
++static void add_rows(uint32_t screen, int which)
+ {
+     uint32_t row;
+     int i;
+ 
+     for (i = 0; i < N_ROWS; i++) {
+         OptRow *o = &s_rows[i];
+-        if (o->gameplay != gameplay)
++        if (o->screen != which)
+             continue;
+         if (!o->vtable) {
+             o->vtable = xbox_ContiguousAlloc(ROW_VTABLE_SIZE, 16);
+@@ -2058,7 +2141,7 @@ void sub_000CE8D0(void)
+         sub_00118CE0();
+         esp += 4;
+     }
+-    add_rows(screen, 0);
++    add_rows(screen, SCREEN_VIDEO);
+ }
+ 
+ /* Gameplay screen (thiscall, ecx = options screen): its rows, then ours. */
+@@ -2067,9 +2150,22 @@ void sub_000CEA00(void)
+     uint32_t screen = ecx;
+ 
+     sub_000CEA00_gen();
+-    add_rows(screen, 1);
++    add_rows(screen, SCREEN_GAMEPLAY);
+ }
+ 
++#ifdef NFSU2_PS5
++/* Audio screen (thiscall, ecx = options screen; built by sub_000CE680 from
++ * its six volume sliders, sub_0012B550 + sub_0015B5F0, on the same
++ * 0x100..0x120 slots): the sliders, then Multichannel Sound and Speaker Test. */
++void sub_000CE680(void)
++{
++    uint32_t screen = ecx;
++
++    sub_000CE680_gen();
++    add_rows(screen, SCREEN_AUDIO);
++}
++#endif
++
+ /* Row refresh (thiscall): label and value text. */
+ static void opt_row_text(uint32_t row, const OptRow *o)
+ {
 diff --git a/src/text_patch.c b/src/text_patch.c
-index 08482a7..4fed3d6 100644
+index 08482a7..8c59c57 100644
 --- a/src/text_patch.c
 +++ b/src/text_patch.c
 @@ -40,6 +40,8 @@ static const struct { uint32_t hash; const char *text; } s_always[] = {
@@ -266,7 +456,27 @@ index 08482a7..4fed3d6 100644
      { 0x4CD775ACu, "Anti-Aliasing" },            /* "Full Screen Anti-Aliasing" */
      { 0x4E57D355u, "Anisotropic" },              /* "Horizon Fog" */
      { 0xA9C27DFDu, "Square Pixels" },            /* "Depth Of Field" */
-@@ -64,6 +66,28 @@ static int s_switch_words;
+@@ -58,12 +60,48 @@ static const struct { uint32_t hash; const char *text; } s_always[] = {
+     { 0x4DEAB931u, "80%" },                      /* "Wheel Options" */
+     { 0x92423B95u, "90%" },                      /* "Wheel Options" */
+     { 0x14D4BD3Bu, "100%" },                     /* "Wheel Configuration" */
++#if defined(NFSU2_PS5)
++    /* Options -> Audio rows (GameCube, PS2 and PC keyboard strings) */
++    { 0x9BA134FCu, "Multichannel Sound" },       /* "Licensed by Nintendo" */
++    { 0xB7D0D273u, "Speaker Test" },             /* "Reset Keys To Default" */
++    { 0x1F182080u, "Front Left" },               /* "Press Enter Key" */
++    { 0x7EADFD76u, "Front Right" },              /* "System Speaker" */
++    { 0xB7D33921u, "Centre" },                   /* "Shift Down" */
++    { 0xBD7BA1AAu, "Subwoofer" },                /* "Steering (Right)" */
++    { 0x2408AD3Du, "Surround Left" },            /* "MEMORY CARD slot 1" */
++    { 0x0928B181u, "Surround Right" },           /* "Memory Card Slot A" */
++    { 0xE590F5A3u, "Back Left" },                /* "memory card (PS2)" */
++    { 0x038A6E08u, "Back Right" },               /* "Look Back (Down)" */
++    { 0xB19F8A18u, "All in Turn" },              /* "Memory Card" */
++#endif
+ };
+ 
+ static int s_switch_words;
  
  /* Whole strings, by label hash. */
  static const struct { uint32_t hash; const char *text; } s_by_hash[] = {
@@ -295,7 +505,7 @@ index 08482a7..4fed3d6 100644
      { 0x45A6A9CEu, "Please press + to begin" },  /* TITLE_SCREEN_START_PROMPT_XBOX */
      { 0xEEEB248Eu, "Press +" },                  /* TITLE_SCREEN_START_PROMPT */
      { 0x1F181F57u, "Press +" },                  /* TITLE_SCREEN_START_PROMPT_GC */
-@@ -79,6 +103,7 @@ static const struct { uint32_t hash; const char *text; } s_by_hash[] = {
+@@ -79,6 +117,7 @@ static const struct { uint32_t hash; const char *text; } s_by_hash[] = {
                     "  Do you want to start the troubleshooter?" },
      { 0xFD9E06CDu, "Are you sure you want to exit to the HOME Menu"
                     " and create a new online account?" },
@@ -303,7 +513,7 @@ index 08482a7..4fed3d6 100644
  };
  
  /* Substrings, first match wins at each position; for every other string. */
-@@ -98,8 +123,13 @@ static const struct { const char *from, *to; } s_rules[] = {
+@@ -98,8 +137,13 @@ static const struct { const char *from, *to; } s_rules[] = {
      { "to Xbox Live until", "online until" },
      { "Xbox Live", "Online" },
      { "your Xbox personal information", "your personal information" },
@@ -317,7 +527,7 @@ index 08482a7..4fed3d6 100644
      { "Gamertag", "Username" },
      { "Thumbstick", "Stick" },
  };
-@@ -187,7 +217,7 @@ static void patch_chunk(uint8_t *c, size_t avail)
+@@ -187,7 +231,7 @@ static void patch_chunk(uint8_t *c, size_t avail)
      for (k = 0; k < count; k++)
          wr32(t + 8 * k + 4, noff[k]);
      printf("[TEXT] %s: %d of %u strings changed\n",
@@ -326,7 +536,7 @@ index 08482a7..4fed3d6 100644
      free(out); free(noff);
      return;
  fail:
-@@ -195,6 +225,76 @@ fail:
+@@ -195,6 +239,76 @@ fail:
      free(out); free(noff);
  }
  
@@ -403,7 +613,7 @@ index 08482a7..4fed3d6 100644
  static void on_read(void *buf, size_t len, int64_t offset)
  {
      uint8_t *b = buf;
-@@ -205,12 +305,16 @@ static void on_read(void *buf, size_t len, int64_t offset)
+@@ -205,12 +319,16 @@ static void on_read(void *buf, size_t len, int64_t offset)
      for (; i + 32 <= len; i += LANG_ALIGN)
          if (rd32(b + i) == LANG_CHUNK_ID)
              patch_chunk(b + i, len - i);
@@ -421,6 +631,121 @@ index 08482a7..4fed3d6 100644
      int on = !(e && e[0] == '0');
  #else
      int on = e && e[0] == '1';
+diff --git a/xboxrecomp/src/apu/apu_core.c b/xboxrecomp/src/apu/apu_core.c
+index bb2e72a..ff2d5e9 100644
+--- a/xboxrecomp/src/apu/apu_core.c
++++ b/xboxrecomp/src/apu/apu_core.c
+@@ -23,6 +23,9 @@
+ #include "apu.h"
+ #include "apu_xaudio2.h"
+ #include "fpconv.h"
++#ifdef NFSU2_PS5
++#include "audio_mix.h"
++#endif
+ 
+ /* ============================================================
+  * Globals
+@@ -303,6 +306,43 @@ void mcpx_apu_monitor_frame(MCPXAPUState *d)
+     if (xa2_is_active()) {
+         int n = MIXER_FRAME_SAMPLES;
+ 
++#ifdef NFSU2_PS5
++        /* Both mixes are kept: the 5.1 bed for an eight-channel port, the
++         * stereo fold for the fallback. The software mixer (movies, music
++         * streams) runs once and lands on the front pair of each. */
++        int16_t software[256][2] = {{0}};
++        if (g_audio_muted) {
++            memset(d->monitor.frame_buf, 0, sizeof(d->monitor.frame_buf));
++            memset(d->monitor.surround_buf, 0, sizeof(d->monitor.surround_buf));
++        } else {
++            mixer_render(software, n);
++            for (int i = 0; i < n; i++) {
++                if (g_test_tone.active) {
++                    int16_t tone = (int16_t)(sin(g_test_tone.phase) * g_test_tone.amplitude);
++                    g_test_tone.phase += g_test_tone.phase_inc;
++                    if (g_test_tone.phase >= 2.0 * M_PI) g_test_tone.phase -= 2.0 * M_PI;
++                    memset(d->monitor.surround_buf[i], 0, sizeof(d->monitor.surround_buf[i]));
++                    d->monitor.frame_buf[i][0] = d->monitor.frame_buf[i][1] = tone;
++                    d->monitor.surround_buf[i][0] = d->monitor.surround_buf[i][1] = tone;
++                }
++                if (d->monitor.point == MCPX_APU_DEBUG_MON_VP) {
++                    d->monitor.surround_buf[i][0] = d->monitor.frame_buf[i][0];
++                    d->monitor.surround_buf[i][1] = d->monitor.frame_buf[i][1];
++                }
++                for (int c = 0; c < 2; c++) {
++                    d->monitor.frame_buf[i][c] = nfsu2_audio_add(d->monitor.frame_buf[i][c], software[i][c]);
++                    d->monitor.surround_buf[i][c] = nfsu2_audio_add(d->monitor.surround_buf[i][c], software[i][c]);
++                }
++            }
++        }
++        if (xa2_output_channels() == 8)
++            xa2_submit_surround(&d->monitor.surround_buf[0][0], n);
++        else
++            xa2_submit_samples(&d->monitor.frame_buf[0][0], n);
++        memset(d->monitor.surround_buf, 0, sizeof(d->monitor.surround_buf));
++        memset(d->monitor.frame_buf, 0, sizeof(d->monitor.frame_buf));
++        return;
++#endif
+         if (g_test_tone.active && !g_audio_muted) {
+             for (int i = 0; i < n; i++) {
+                 int16_t s = (int16_t)(sin(g_test_tone.phase) * g_test_tone.amplitude);
+diff --git a/xboxrecomp/src/apu/apu_dsp.c b/xboxrecomp/src/apu/apu_dsp.c
+index 89a7ee1..e64bf67 100644
+--- a/xboxrecomp/src/apu/apu_dsp.c
++++ b/xboxrecomp/src/apu/apu_dsp.c
+@@ -24,6 +24,9 @@
+ 
+ #include "apu_state.h"
+ #include "fpconv.h"
++#ifdef NFSU2_PS5
++#include "audio_mix.h"
++#endif
+ 
+ #include <stdlib.h>
+ #include <string.h>
+@@ -232,6 +235,10 @@ void mcpx_apu_dsp_frame(MCPXAPUState *d,
+              * Each of the 8 sub-frames writes its own 32-sample slice. */
+             d->monitor.frame_buf[off + i][0] = (int16_t)(left * 32767.0f);
+             d->monitor.frame_buf[off + i][1] = (int16_t)(right * 32767.0f);
++#ifdef NFSU2_PS5
++            nfsu2_audio_route(&mixbins[0][0], NUM_SAMPLES_PER_FRAME, i,
++                              d->monitor.surround_buf[off + i]);
++#endif
+         }
+     }
+ 
+diff --git a/xboxrecomp/src/apu/apu_state.h b/xboxrecomp/src/apu/apu_state.h
+index 4e61dc0..d8b02d2 100644
+--- a/xboxrecomp/src/apu/apu_state.h
++++ b/xboxrecomp/src/apu/apu_state.h
+@@ -507,6 +507,9 @@ struct MCPXAPUState {
+     struct {
+         McpxApuDebugMonitorPoint point;
+         int16_t frame_buf[256][2];
++#ifdef NFSU2_PS5
++        int16_t surround_buf[256][8];
++#endif
+         void *stream; /* SDL_AudioStream* - stubbed */
+         int queued_bytes_low, queued_bytes_high;
+     } monitor;
+diff --git a/xboxrecomp/src/apu/apu_xaudio2.h b/xboxrecomp/src/apu/apu_xaudio2.h
+index e19c4ea..b0212ed 100644
+--- a/xboxrecomp/src/apu/apu_xaudio2.h
++++ b/xboxrecomp/src/apu/apu_xaudio2.h
+@@ -18,6 +18,13 @@ int xa2_is_active(void);
+ /* Submit interleaved stereo 16-bit samples. Returns 1 if accepted. */
+ int xa2_submit_samples(const int16_t *samples, int num_samples);
+ 
++#ifdef NFSU2_PS5
++/* S16_8CH: front L/R, centre, LFE, surround L/R, extra L/R.
++ * Xbox is 5.1; the last pair stays silent. Stereo callers remain supported. */
++int xa2_submit_surround(const int16_t *samples, int num_samples);
++int xa2_output_channels(void);
++#endif
++
+ /* Get the preferred buffer size in samples. */
+ int xa2_get_buffer_size(void);
+ 
 diff --git a/xboxrecomp/src/kernel/kernel.h b/xboxrecomp/src/kernel/kernel.h
 index c0c0548..c00dd55 100644
 --- a/xboxrecomp/src/kernel/kernel.h
@@ -498,6 +823,37 @@ index dcb9fa4..edfcea7 100644
              continue;       /* exists; its size is reported from the table */
  #endif
              if (truncate(path, (off_t)(s_part_sectors[i] * 512ull)) != 0)
+diff --git a/xboxrecomp/src/kernel/kernel_xbox.c b/xboxrecomp/src/kernel/kernel_xbox.c
+index d92d72e..1488405 100644
+--- a/xboxrecomp/src/kernel/kernel_xbox.c
++++ b/xboxrecomp/src/kernel/kernel_xbox.c
+@@ -10,6 +10,9 @@
+  */
+ 
+ #include "kernel.h"
++#ifdef NFSU2_PS5
++#include "apu/apu_xaudio2.h"
++#endif
+ #include <string.h>
+ #include <stdlib.h>
+ 
+@@ -166,10 +169,14 @@ NTSTATUS __stdcall xbox_ExQueryNonVolatileSetting(
+         break;
+ 
+     case XC_AUDIO:
+-        /* Stereo PCM matches the two-channel host output. 1 means mono;
+-         * advertising AC3 requires an encoded-output path. */
++        /* Surround is low-word 2, independent of AC3/DTS: DirectSound and
++         * EA's mixer test it. The host receives PCM, not AC3. */
+         if (ValueLength >= sizeof(ULONG)) {
++#ifdef NFSU2_PS5
++            *(PULONG)Value = xa2_output_channels() == 8 ? 0x00000002 : 0;
++#else
+             *(PULONG)Value = 0x00000000;
++#endif
+             if (Type) *Type = 4; /* REG_DWORD */
+             if (ResultLength) *ResultLength = sizeof(ULONG);
+         }
 diff --git a/xboxrecomp/src/kernel/xbox_memory_layout.c b/xboxrecomp/src/kernel/xbox_memory_layout.c
 index c1698f3..c2b904c 100644
 --- a/xboxrecomp/src/kernel/xbox_memory_layout.c

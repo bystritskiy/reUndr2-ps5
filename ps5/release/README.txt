@@ -35,5 +35,15 @@ the game show these PS5 buttons.
 Split screen: the second player needs a separate logged-in PS5 user or a guest.
 Main menu, right, 2 Player Split-Screen; at car select each player presses Options.
 
+SOUND
+
+The game's 5.1 mix goes to the PS5 as eight-channel PCM and follows the
+speaker setup in the PS5 settings. Options, Audio: Multichannel Sound On
+also plays music and the front pair from the centre, subwoofer and rear
+speakers; Off keeps only the game's own surround mix. Speaker Test plays a
+tone from one speaker, or from all of them in turn: set it back to Off
+afterwards.
+NFSU2_AUDIO_CHANNELS=2 in nfsu2_env.txt brings back stereo.
+
 Settings, saves and logs are in /data/nfsu2/PPSA99027/; the settings themselves
 are in nfsu2_env.txt there. Licences are in licenses/.

@@ -52,6 +52,9 @@ A replacement runtime handles the original console's graphics, audio, input and 
 - **Two players.** Split screen on one console with two DualSense controllers and independent rumble.
 - **Disc image install.** Copy your `.iso` to the console and start the app, it does the rest.
 - **16:9 movies.** Cutscenes and intro videos fill the widescreen frame.
+- **5.1 surround.** The game's own speaker positions reach the PS5 as multichannel PCM, so cars
+  behind you sound behind you on a surround system. The PS5 folds it down for TV speakers and
+  headphones.
 
 <table>
   <tr>
@@ -126,7 +129,11 @@ merges two controllers into one, doesn't add a player. Split screen: main menu â
 
 **Options â†’ Video** has **Car Reflections**, **Resolution Scale** (`1x`, `1.5x`, `2x`, `2.5x`,
 `3x`, `4.5x`), **Anti-Aliasing** (FXAA), **Anisotropic** (`Off`, `2x`, `4x`, `8x`, `16x`) and
-**Square Pixels**. Settings saved in the game override the configuration file below.
+**Square Pixels**. **Options â†’ Audio** has **Multichannel Sound** (`On`: music and the front
+pair also play from the centre, subwoofer and rear speakers; `Off`: only the game's own surround
+mix) and **Speaker Test** (a tone from one speaker at a time, or from all of them in turn, to check
+the layout; set it back to `Off` afterwards). Settings saved in the game override the configuration
+file below.
 
 `/data/nfsu2/PPSA99027/nfsu2_env.txt` is optional and holds `KEY=VALUE` lines read at start:
 
@@ -138,6 +145,8 @@ merges two controllers into one, doesn't add a player. Split screen: main menu â
 | `RECOMP_VK_ANISO` | 16 | anisotropic filtering |
 | `RECOMP_VK_FXAA` | 1 | FXAA |
 | `RECOMP_AUDIO_VOLUME` | 50 | volume |
+| `NFSU2_AUDIO_CHANNELS` | 8 | 2 brings back the stereo output |
+| `NFSU2_AUDIO_SPREAD` | 1 | Multichannel Sound until it is changed in the menu |
 | `RECOMP_FPS_LOG` | 0 | fps in the log every 10 seconds |
 | `NFSU2_HD` | 1 | 0 turns the HD textures off, and the PlayStation prompts with them |
 | `NFSU2_FMV` | 1 | 0 plays movies from the disc even when the app has upscaled movie packs |
@@ -167,7 +176,7 @@ python3 tools/rebuild-deps.py                          # pinned dependencies (if
 .venv/bin/python tools/build-hd-ui.py                  # HD fonts, DualSense diagram and PS icons
 bash tools/build.sh                                    # compile and link
 python3 tools/test.py                                  # tests under ASan and UBSan
-.venv/bin/python tools/package.py --release            # dist/release/PPSA99027-01.000.000.zip
+.venv/bin/python tools/package.py --release            # dist/release/PPSA99027-01.001.000.zip
 ```
 
 Exact revisions are in `ps5/dependencies.json`, changes to upstream in `ps5/upstream.patch`. The

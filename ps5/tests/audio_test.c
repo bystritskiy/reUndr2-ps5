@@ -8,11 +8,29 @@ static pthread_mutex_t gate = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t changed = PTHREAD_COND_INITIALIZER;
 static int entered, credits, release_all, fail_output, closed;
 static int16_t frames[8][512];
+int nfsu2_native_audio_open(int c){(void)c;return 0;}
+int nfsu2_native_audio_write(const int16_t *p){(void)p;abort();}
+void nfsu2_native_audio_log(void){}
+void nfsu2_native_audio_close(void){}
 int sceAudioOutInit(void) { return 0; }
 int sceAudioOutOpen(int user,int type,int index,unsigned grain,unsigned rate,unsigned format)
 {
     assert(user==255 && type==0 && index==0 && grain==256 && rate==48000 && format==1);
     return 9;
+}
+int sceAudioOutSetVolume(int h,int mask,const int *volumes)
+{
+    assert(h==9 && (mask==3 || mask==255));
+    for(int i=0;i<8;i++)assert(volumes[i]==32768);
+    return 0;
+}
+int sceAudioOutGetPortState(int h,void *state)
+{
+    assert(h==9);memset(state,0,32);return 0;
+}
+int sceAudioOutSysGetHdmiMonitorInfo(int type,void *buf,unsigned size)
+{
+    assert(type==1 && size==0x180);memset(buf,0,size);return -1;
 }
 int sceAudioOutClose(int handle) { assert(handle==9); closed++;return 0; }
 int sceAudioOutOutput(int handle,const void *pcm)
@@ -38,6 +56,7 @@ static void advance(void)
 }
 int main(void)
 {
+    setenv("NFSU2_AUDIO_CHANNELS", "2", 1);
     xa2_set_master_volume(1.0f);assert(xa2_init());wait_calls(1);
     int16_t samples[512];for(unsigned i=0;i<512;i++)samples[i]=(int16_t)(i-256);
     assert(!xa2_submit_samples(NULL,256));assert(!xa2_submit_samples(samples,257));

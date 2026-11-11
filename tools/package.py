@@ -80,7 +80,7 @@ def main():
  if a.release:
   stray=[f for f in inv if f not in RELEASE_FILES and not f.startswith(('licenses/','sce_sys/')) and not re.fullmatch(r'hd/[0-9a-f]{32}\.rgba',f)]
   if stray:raise SystemExit('Not allowed in a release: '+', '.join(stray))
- receipt={'title_id':'PPSA99027','content_version':'01.000.000','console_tested':False,'game_linked':True,'game_included':bool(a.game),'fself_integrity':'valid','files':inv,'upstream_commit':json.loads((ROOT/'ps5/dependencies.json').read_text())['upstream']}
+ receipt={'title_id':'PPSA99027','content_version':param['contentVersion'],'console_tested':False,'game_linked':True,'game_included':bool(a.game),'fself_integrity':'valid','files':inv,'upstream_commit':json.loads((ROOT/'ps5/dependencies.json').read_text())['upstream']}
  report_path=ROOT/'docs/console-validation.json'
  if report_path.is_file():
   report=json.loads(report_path.read_text())
