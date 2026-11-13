@@ -1,5 +1,4 @@
 /source/
-/upstream/
 /build/
 /dist/
 /.venv/
@@ -7,3 +6,7 @@
 __pycache__/
 
 /logs/
+
+# Toolkit output: disassembly of the retail XBE (tools/regen.sh)
+/recomp/xboxrecomp/tools/*/output/
+*.pyc

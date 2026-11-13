@@ -1,5 +1,4 @@
 {
-  "upstream": "d3bbc3094f8e1ad3b34593eabd431f7d251b14cb",
   "sources": {
     "sdl3": [
       "https://github.com/libsdl-org/SDL.git",
@@ -42,6 +41,5 @@
     "architecture": "amd64",
     "archive_sha256": "52f850cf79b9cda0b00b78aa2fed86bae6947e596cc7cafb52dba4fd88acb07d"
   },
-  "ps5_content_version": "01.002.000",
-  "upstream_url": "https://github.com/antoxa2584x/nfsu2-sw.git"
+  "ps5_content_version": "01.002.000"
 }

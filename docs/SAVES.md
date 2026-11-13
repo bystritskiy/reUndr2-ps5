@@ -20,7 +20,7 @@ the profile.
 Each signature is the XAPI roaming save signature (`XCalculateSignatureBegin`
 with flags 0): HMAC-SHA1 keyed with the kernel export `XboxSignatureKey`. There is
 no HDD-bound (no-roam) signature. The port leaves that key at 16 zero bytes
-(`upstream/xboxrecomp/src/kernel/kernel_bridge.c`), so the key is `00 * 16`.
+(`recomp/xboxrecomp/src/kernel/kernel_bridge.c`), so the key is `00 * 16`.
 
 The game checks all three on load (`sub_00256117`, `repe cmpsd` against the
 stored signatures) and reports the save as damaged on a mismatch. Saves are

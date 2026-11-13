@@ -1,9 +1,11 @@
 /* Host-side movie picture replacement. The game keeps decoding and drawing its
  * own VP6 movie, which keeps the audio, timing, skipping and the 16:9 crop
- * (upstream/src/movie_crop.c) its own. While a pack for the open movie exists,
+ * (recomp/src/movie_crop.c) its own. While a pack for the open movie exists,
  * the movie texture is shown from frame N of the pack after the game decoded
- * frame N. Decoding, conversion and drawing run on the game's thread, so the
- * last decoded frame is the one in the texture.
+ * frame N. The game's VP6 decode of a frame the pack covers is skipped: on the
+ * game's thread it costs 20-40 ms, most of a 30 fps frame, and with the AV1
+ * decoder running too, movies stuttered. Decoding, conversion and drawing run
+ * on the game's thread, so the last decoded frame is the one in the texture.
  *
  * A pack is <app>/hd/fmv/HASH.fmv, HASH the ZDIR hash of the upper-case movie
  * path, so the movies the disc lists only by hash need no names: a 40-byte
@@ -35,7 +37,7 @@ typedef struct {
 } NfsFmvHeader;
 _Static_assert(sizeof(NfsFmvHeader) == 40, "FMV pack header ABI");
 
-/* upstream/src/recomp_manual.c: the last row the game's colour conversion wrote. */
+/* recomp/src/recomp_manual.c: the last row the game's colour conversion wrote. */
 extern uint32_t nfsu2_movie_row;
 
 static int fd = -1;
@@ -109,9 +111,10 @@ void nfsu2_fmv_movie(const char *path)
     hash_open = fd >= 0 ? hash : 0;
 }
 
-void nfsu2_fmv_decoded(void)
+int nfsu2_fmv_decoded(void)
 {
-    atomic_fetch_add(&decoded, 1);
+    const uint32_t n = atomic_fetch_add(&decoded, 1) + 1;
+    return fd >= 0 && n <= header.frames;
 }
 
 static uint32_t current(uint32_t va, uint32_t color, uint32_t w, uint32_t h)

@@ -63,8 +63,8 @@ def main():
  notices=app/'licenses';notices.mkdir(exist_ok=True)
  for label,source in {
   'PS5-host-MIT.txt':'LICENSE','PS5-port-notice.txt':'NOTICE.md','dependencies.json':'ps5/dependencies.json',
-  'xboxrecomp-MIT.txt':'upstream/xboxrecomp/LICENSE','xboxrecomp-NOTICE.txt':'upstream/xboxrecomp/NOTICE',
-  'xemu-LGPL.txt':'upstream/xboxrecomp/LICENSES/LGPL-2.1.txt','SDL3-zlib.txt':'build/deps/sdl3/LICENSE.txt',
+  'xboxrecomp-MIT.txt':'recomp/xboxrecomp/LICENSE','xboxrecomp-NOTICE.txt':'recomp/xboxrecomp/NOTICE',
+  'xemu-LGPL.txt':'recomp/xboxrecomp/LICENSES/LGPL-2.1.txt','SDL3-zlib.txt':'build/deps/sdl3/LICENSE.txt',
   'glslang.txt':'build/deps/glslang/LICENSE.txt','SPIRV-Tools-Apache.txt':'build/deps/spirv-tools/LICENSE',
   'SPIRV-Headers.txt':'build/deps/spirv-headers/LICENSE','dav1d-BSD.txt':'build/deps/dav1d/COPYING','PS5-Vulkan-GPL.txt':'build/deps/PS5_Vulkan/LICENSE',
   'PS5-Vulkan-NOTICE.txt':'build/deps/PS5_Vulkan/NOTICE.md','PS5-PayloadSDK.txt':'build/deps/PS5_PayloadSDK/LICENSE',
@@ -81,7 +81,7 @@ def main():
  if a.release:
   stray=[f for f in inv if f not in RELEASE_FILES and not f.startswith(('licenses/','sce_sys/')) and not re.fullmatch(r'hd/[0-9a-f]{32}\.rgba',f)]
   if stray:raise SystemExit('Not allowed in a release: '+', '.join(stray))
- receipt={'title_id':'PPSA99027','content_version':param['contentVersion'],'console_tested':False,'game_linked':True,'game_included':bool(a.game),'fself_integrity':'valid','files':inv,'upstream_commit':json.loads((ROOT/'ps5/dependencies.json').read_text())['upstream']}
+ receipt={'title_id':'PPSA99027','content_version':param['contentVersion'],'console_tested':False,'game_linked':True,'game_included':bool(a.game),'fself_integrity':'valid','files':inv,'source_commit':subprocess.run(['git','-C',str(ROOT),'rev-parse','HEAD'],capture_output=True,text=True).stdout.strip()}
  report_path=ROOT/'docs/console-validation.json'
  if report_path.is_file():
   report=json.loads(report_path.read_text())

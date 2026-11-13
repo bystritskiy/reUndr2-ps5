@@ -3,8 +3,9 @@
 #include <stdint.h>
 /* The path the game built for the movie it opens, e.g. "MOVIES\scene01.vp6". */
 void nfsu2_fmv_movie(const char *path);
-/* One more VP6 frame of the open movie was decoded. */
-void nfsu2_fmv_decoded(void);
+/* The game decodes one more VP6 frame of the open movie. Nonzero when a pack frame
+ * stands in for it, so the VP6 picture is never shown and need not be decoded. */
+int nfsu2_fmv_decoded(void);
 /* Nonzero while texture va is the movie picture and a pack frame stands in for it;
  * changes with every frame, so it can be mixed into the texture's hash. */
 uint32_t nfsu2_fmv_tag(uint32_t va, uint32_t color, uint32_t w, uint32_t h);

@@ -9,7 +9,7 @@ get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 set(PS5_DEPS "${ROOT}/build/deps" CACHE PATH "PS5 dependencies")
 set(PS5_SDL_BUILD "${ROOT}/build/sdl3" CACHE PATH "SDL3 build")
 set(PS5_SHADER_BUILD "${ROOT}/build/shader-compiler" CACHE PATH "glslang build")
-set(RT "${ROOT}/upstream/xboxrecomp/src")
+set(RT "${ROOT}/recomp/xboxrecomp/src")
 set(GEN "${ROOT}/build/gen")
 file(GLOB generated CONFIGURE_DEPENDS "${GEN}/*.c")
 if(NOT generated)
@@ -26,8 +26,8 @@ set(runtime platform/win32_compat.c kernel/kernel_path.c kernel/kernel_pool.c ke
  nv2a_vk/nv2a_vk.c nv2a_gl/gl_vsh.c nv2a_gl/gl_psh.c)
 list(TRANSFORM runtime PREPEND "${RT}/")
 add_library(nfsu2_runtime STATIC ${runtime})
-add_library(nfsu2_game STATIC "${ROOT}/upstream/src/main.c" "${ROOT}/upstream/src/recomp_manual.c"
- "${ROOT}/upstream/src/text_patch.c" "${ROOT}/upstream/src/movie_crop.c" "${ROOT}/upstream/src/nic.c" ${generated})
+add_library(nfsu2_game STATIC "${ROOT}/recomp/src/main.c" "${ROOT}/recomp/src/recomp_manual.c"
+ "${ROOT}/recomp/src/text_patch.c" "${ROOT}/recomp/src/movie_crop.c" "${ROOT}/recomp/src/nic.c" ${generated})
 add_library(nfsu2_host STATIC src/memory_ps5.c src/input_ps5.c src/pad_map.c src/audio_ps5.c src/audio_native.c src/sha256.c src/xbe_check.c src/hd_textures.c src/fmv_replace.c src/fmv_video.c src/disc_image.c src/screen_ps5.c)
 set(IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui")
 add_library(nfsu2_port STATIC src/port_menu.cpp "${IMGUI}/imgui.cpp" "${IMGUI}/imgui_draw.cpp"
@@ -36,8 +36,8 @@ target_compile_definitions(nfsu2_port PRIVATE NFSU2_PS5=1 NFSU2_VULKAN=1 IMGUI_D
  IMGUI_DISABLE_OBSOLETE_FUNCTIONS "NFSU2_PORT_FONT=\"${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/Roboto-Medium.ttf\""
  "NFSU2_WHATS_NEW=\"${CMAKE_CURRENT_SOURCE_DIR}/release/whats_new.txt\"")
 target_compile_options(nfsu2_port PRIVATE -std=c++20 -O2 -fno-exceptions -fno-rtti -ffunction-sections -fdata-sections)
-target_include_directories(nfsu2_port PRIVATE compat src "${IMGUI}" "${RT}/platform" "${RT}/nv2a_vk" "${ROOT}/upstream/src"
- "${ROOT}/upstream/xboxrecomp/include" "${RT}" "${PS5_DEPS}/PS5_Mesa/include"
+target_include_directories(nfsu2_port PRIVATE compat src "${IMGUI}" "${RT}/platform" "${RT}/nv2a_vk" "${ROOT}/recomp/src"
+ "${ROOT}/recomp/xboxrecomp/include" "${RT}" "${PS5_DEPS}/PS5_Mesa/include"
  "${PS5_DEPS}/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include")
 set_source_files_properties(src/port_menu.cpp PROPERTIES OBJECT_DEPENDS
  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/Roboto-Medium.ttf;${CMAKE_CURRENT_SOURCE_DIR}/release/whats_new.txt")
@@ -45,8 +45,8 @@ add_library(nfsu2_start OBJECT src/native_start.c src/main_ps5.c "${ROOT}/build/
 foreach(t nfsu2_runtime nfsu2_game nfsu2_host nfsu2_start)
  target_compile_definitions(${t} PRIVATE NFSU2_PS5=1 NFSU2_PS5_DIRECT_MEMORY=1 NFSU2_VULKAN=1)
  target_compile_options(${t} PRIVATE -O2 -fwrapv -fsigned-char -ffp-contract=off -fno-strict-aliasing -ffunction-sections -fdata-sections -Wno-format -Wno-pointer-sign -Wno-parentheses-equality -Wno-unused-value)
- target_include_directories(${t} PRIVATE compat src "${ROOT}/upstream/src" "${GEN}"
- "${ROOT}/upstream/xboxrecomp/include" "${RT}" "${RT}/platform" "${RT}/kernel" "${RT}/apu"
+ target_include_directories(${t} PRIVATE compat src "${ROOT}/recomp/src" "${GEN}"
+ "${ROOT}/recomp/xboxrecomp/include" "${RT}" "${RT}/platform" "${RT}/kernel" "${RT}/apu"
  "${RT}/nv2a" "${RT}/nv2a_vk" "${RT}/nv2a_gl" "${RT}/input" "${RT}/video" "${RT}/audio" "${RT}/d3d" "${RT}/usb"
  "${PS5_DEPS}/PS5_Mesa/include" "${PS5_DEPS}/sdl3/include" "${PS5_DEPS}/glslang"
  "${PS5_DEPS}/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include")

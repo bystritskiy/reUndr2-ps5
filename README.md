@@ -188,17 +188,17 @@ own disc, unpacked to `source/Need for Speed Underground 2`:
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -r tools/requirements.txt
-.venv/bin/python tools/prepare.py                      # upstream, and C from the Xbox disc
+.venv/bin/python tools/prepare.py                      # C from the Xbox disc
 python3 tools/rebuild-deps.py                          # pinned dependencies (if not cached)
 .venv/bin/python tools/build-hd-ui.py                  # HD fonts, DualSense diagram and PS icons
 bash tools/build.sh                                    # compile and link
 python3 tools/test.py                                  # tests under ASan and UBSan
-.venv/bin/python tools/package.py --release            # dist/release/PPSA99027-01.001.000.zip
+.venv/bin/python tools/package.py --release            # dist/release/PPSA99027-01.002.000.zip
 ```
 
-Exact revisions are in `ps5/dependencies.json`, changes to upstream in `ps5/upstream.patch`. The
-public package is checked against a list of allowed files, and the HD art in it is drawn from
-vectors and strokes, with nothing taken from the disc's pixels.
+`recomp/` holds the recompiler and the game's runtime; the other dependencies are pinned in
+`ps5/dependencies.json`. The public package is checked against a list of allowed files, and the HD
+art in it is drawn from vectors and strokes, with nothing taken from the disc's pixels.
 
 A local build may add upscaled movies as `hd/fmv/HASH.fmv`, HASH being the ZDIR hash of the movie's
 path: AV1 frames that `ps5/src/fmv_replace.c` shows in place of the frames the game decodes, so the
@@ -208,7 +208,7 @@ carries them.
 ## Credits
 
 - **[antoxa2584x/nfsu2-sw](https://github.com/antoxa2584x/nfsu2-sw)** is the recompilation this port
-  is built on.
+  is built on; its code lives on in `recomp/`, with its author's permission.
 - **[xboxrecomp](https://github.com/sp00nznet/xboxrecomp)** is its Xbox runtime.
 - [PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan),
   [PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) (RADV) and
