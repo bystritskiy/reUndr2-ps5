@@ -52,6 +52,8 @@ A replacement runtime handles the original console's graphics, audio, input and 
 - **Two players.** Split screen on one console with two DualSense controllers and independent rumble.
 - **Disc image install.** Copy your `.iso` to the console and start the app, it does the rest.
 - **16:9 movies.** Cutscenes and intro videos fill the widescreen frame.
+- **Settings in one place.** Touchpad + Options opens the port's settings over the game: render
+  scale up to 4K, anti-aliasing, motion blur, detail distance, vibration, sound and a benchmark.
 - **5.1 surround.** The game's own speaker positions reach the PS5 as multichannel PCM, so cars
   behind you sound behind you on a surround system. The PS5 folds it down for TV speakers and
   headphones.
@@ -67,7 +69,11 @@ A replacement runtime handles the original console's graphics, audio, input and 
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/car.jpg" alt="The car lot with Select Car and Help prompts"><br><sub>The Car Lot, with PlayStation prompts.</sub></td>
-    <td width="50%"><img src="docs/media/video.jpg" alt="Options -> Video showing Resolution Scale 4.5x, Anti-Aliasing, Anisotropic 16x and Square Pixels"><br><sub>Options → Video.</sub></td>
+    <td width="50%"><img src="docs/media/port-menu.jpg" alt="The port settings menu over the city, Graphics tab with Resolution Scale 4.5x, Motion Blur and Detail Distance"><br><sub>Port settings (Touchpad + Options).</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/port-performance.jpg" alt="The Performance tab of the port settings: Frame Rate 60 fps, Performance Overlay, Pause While Open and Benchmark"><br><sub>Port settings: Performance.</sub></td>
+    <td width="50%"><img src="docs/media/overlay.jpg" alt="Free roam at night with the performance overlay showing 60 fps and the frame-time graph"><br><sub>The performance overlay at 60 fps.</sub></td>
   </tr>
 </table>
 
@@ -127,13 +133,22 @@ merges two controllers into one, doesn't add a player. Split screen: main menu �
 
 ## Settings
 
-**Options → Video** has **Car Reflections**, **Resolution Scale** (`1x`, `1.5x`, `2x`, `2.5x`,
-`3x`, `4.5x`), **Anti-Aliasing** (FXAA), **Anisotropic** (`Off`, `2x`, `4x`, `8x`, `16x`) and
-**Square Pixels**. **Options → Audio** has **Multichannel Sound** (`On`: music and the front
-pair also play from the centre, subwoofer and rear speakers; `Off`: only the game's own surround
-mix) and **Speaker Test** (a tone from one speaker at a time, or from all of them in turn, to check
-the layout; set it back to `Off` afterwards). Settings saved in the game override the configuration
-file below.
+The game's own Options are as on the Xbox. The port's settings are in one menu: press
+**Touchpad + Options** in the game, switch tabs with **L1 / R1**, close with **Circle**. Until it is
+opened once, a hint shows after the intro movies.
+
+- **Graphics:** Resolution Scale (`1x` to `4.5x`), Anti-Aliasing (FXAA), Anisotropic Filtering,
+  Square Pixels, Car Reflections, Motion Blur (`Off`, `Low`, `Original`), Detail Distance,
+  Geometry Precision.
+- **Gameplay:** Vibration (`Off` to `100%`); Text Language and Voice Language when the game has a
+  second language (they apply after a restart).
+- **Audio:** Multichannel Sound (`On`: music and the front pair also play from the centre,
+  subwoofer and rear speakers; `Off`: only the game's own surround mix) and Speaker Test (a tone
+  from one speaker at a time, or from all of them in turn; it stops when the menu closes).
+- **Performance:** Frame Rate, Performance Overlay, Pause While Open, a 60-second Benchmark.
+- **What's New:** changes in each version, and where to report problems.
+
+Settings saved in the menu override the configuration file below.
 
 `/data/nfsu2/PPSA99027/nfsu2_env.txt` is optional and holds `KEY=VALUE` lines read at start:
 
@@ -143,6 +158,8 @@ file below.
 | `RECOMP_GL_SCALE` | 4.5 | render scale; 4.5 is 4K |
 | `NFSU2_FPS_CAP` | 60 | 30 brings back the game's own limit; camera sequences stay at 30 fps |
 | `RECOMP_VK_ANISO` | 16 | anisotropic filtering |
+| `NFSU2_LOD_SCALE` | 8 | how many times farther cars, traffic and scenery switch to simpler models (1 to 8; 1 is the original) |
+| `RECOMP_VK_GRID3D` | 0 | 1 snaps 3D geometry to the original 640×480 grid, as before 01.002.000 |
 | `RECOMP_VK_FXAA` | 1 | FXAA |
 | `RECOMP_AUDIO_VOLUME` | 50 | volume |
 | `NFSU2_AUDIO_CHANNELS` | 8 | 2 brings back the stereo output |

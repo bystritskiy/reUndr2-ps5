@@ -163,6 +163,10 @@ int main(int argc,char **argv) {
  SDL_SetHint(SDL_HINT_VIDEO_DRIVER,"offscreen");
  setenv("RECOMP_GIL_EAGER","1",0);setenv("RECOMP_CULL","0",0);
  setenv("RECOMP_GL_SCALE","4.5",0);setenv("RECOMP_VK_HEADLESS","0",1);
+ /* HD fonts and icons share the texture LRU with the world. */
+ setenv("RECOMP_GL_TEX_MB","512",0);
+ /* At 4K the title's LOD switches show up close; see recomp_manual.c. */
+ setenv("NFSU2_LOD_SCALE","8",0);
  setenv("RECOMP_QUIET","1",0);setenv("NFSU2_FPS_CAP","60",0);
  char dir[1024]="/app0/game";
  if(!valid(dir))snprintf(dir,sizeof dir,"/data/nfsu2/game");

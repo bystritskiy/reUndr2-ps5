@@ -1,0 +1,13 @@
+01.002.000
+- Port menu: press Touchpad + Options during the game. All of the port's settings are in one place now, and the game's own Options are as on the Xbox.
+- Sharper 3D geometry in 4K. Geometry Precision brings back the original 640×480 grid.
+- Cars, traffic and scenery switch to simpler models up to 8 times farther away (Detail Distance).
+- Motion Blur: Off, Low or Original.
+- Performance overlay and a 60-second benchmark.
+- Fixed coloured blocks over races at a low Resolution Scale.
+01.001.000
+- 5.1 surround. Cars and effects keep the game's own 5.1 positions on a surround system, through the PS5's native audio output. The PS5 follows your speaker setup and folds it down for TV speakers and headphones; stereo still works.
+- Multichannel Sound plays music and the front pair from every speaker too (on by default), and Speaker Test plays a tone from one speaker at a time, or from all of them in turn, to check the layout.
+- Quitting to create an online account closes the app to the home screen instead of a crash report.
+01.000.000
+- The first release: Need for Speed: Underground 2, the original Xbox version, as a native PS5 app, in 4K at up to 60 fps.

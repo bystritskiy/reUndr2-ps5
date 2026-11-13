@@ -68,7 +68,8 @@ def main():
   'glslang.txt':'build/deps/glslang/LICENSE.txt','SPIRV-Tools-Apache.txt':'build/deps/spirv-tools/LICENSE',
   'SPIRV-Headers.txt':'build/deps/spirv-headers/LICENSE','dav1d-BSD.txt':'build/deps/dav1d/COPYING','PS5-Vulkan-GPL.txt':'build/deps/PS5_Vulkan/LICENSE',
   'PS5-Vulkan-NOTICE.txt':'build/deps/PS5_Vulkan/NOTICE.md','PS5-PayloadSDK.txt':'build/deps/PS5_PayloadSDK/LICENSE',
-  'Mesa-license.txt':'build/deps/PS5_Mesa/docs/license.rst'}.items():
+  'Mesa-license.txt':'build/deps/PS5_Mesa/docs/license.rst',
+  'DearImGui-MIT.txt':'ps5/third_party/imgui/LICENSE.txt','Roboto-Apache-2.0.txt':'ps5/third_party/fonts/Roboto-LICENSE.txt'}.items():
   shutil.copy2(ROOT/source,notices/label)
  shutil.copytree(ROOT/'build/deps/PS5_Mesa/licenses',notices/'Mesa',dirs_exist_ok=True)
  platform=ROOT/'build/deps/PS5_PayloadSDK/platform'

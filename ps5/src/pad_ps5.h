@@ -12,4 +12,6 @@ typedef struct Nfsu2PadData {
 } Nfsu2PadData;
 void nfsu2_ps5_translate_pad(const Nfsu2PadData *src, XBOX_GAMEPAD *dst);
 void nfsu2_ps5_input_shutdown(void);
+uint32_t nfsu2_ps5_pad_buttons(void);
+void nfsu2_ps5_pad_hold(int menu_open);
 #endif

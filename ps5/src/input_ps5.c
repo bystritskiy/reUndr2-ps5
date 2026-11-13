@@ -30,6 +30,40 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_once_t once = PTHREAD_ONCE_INIT;
 static uint64_t next_scan;
 static void (*host_filter)(void *, unsigned);
+/* Port menu (port_menu.cpp): while it is open, and until the buttons that
+ * opened or closed it are released, the title sees no buttons from pad 1. */
+#define ALL_BUTTONS 0x0011FFFEu
+static volatile int hold_game, hold_menu;
+/* Touchpad + Options opens the menu, but alone they are Back (reset the car)
+ * and Start. Pad 1's press of either reaches the title COMBO_MS late: if the
+ * other joins in that time, neither does. A tap shorter than that is still
+ * seen, as a press of TAP_MS. */
+#define COMBO_BUTTONS 0x00100008u
+#define COMBO_MS 100
+#define TAP_MS 50
+static uint64_t now_ms(void);
+static uint32_t combo_filter(uint32_t raw)
+{
+    static uint32_t passed, pend, pulse;
+    static uint64_t pend_at, pulse_until;
+    static int swallow;
+    uint64_t now = now_ms();
+    uint32_t b = raw & COMBO_BUTTONS, out;
+    if (b == COMBO_BUTTONS) { swallow = 1; pend = passed = 0; }
+    if (swallow) {
+        if (!b) swallow = 0;
+        return raw & ~COMBO_BUTTONS;
+    }
+    uint32_t newly = b & ~(passed | pend);
+    if (newly) { if (!pend) pend_at = now; pend |= newly; }
+    uint32_t gone = pend & ~b;
+    if (gone) { pulse |= gone; pulse_until = now + TAP_MS; pend &= ~gone; }
+    if (pend && now - pend_at >= COMBO_MS) { passed |= pend; pend = 0; }
+    passed &= b;
+    if (now >= pulse_until) pulse = 0;
+    out = passed | pulse;
+    return (raw & ~COMBO_BUTTONS) | out;
+}
 static void init_services(void)
 {
     sceUserServiceInitialize(NULL);
@@ -150,6 +184,12 @@ DWORD xbox_InputGetState(DWORD port, XBOX_INPUT_STATE *state)
     int ok = read_slot(&slots[port], &data);
     void (*filter)(void *, unsigned) = host_filter;
     if (ok) {
+        /* The port menu's buttons stay with it until every one is let go. */
+        if (port == 0 && hold_game) {
+            if (!hold_menu && !(data.buttons & ALL_BUTTONS)) hold_game = 0;
+            else data.buttons = 0;
+        }
+        if (port == 0) data.buttons = combo_filter(data.buttons);
         nfsu2_ps5_translate_pad(&data, &state->Gamepad);
         state->dwPacketNumber = ++slots[port].packet;
     }
@@ -196,4 +236,22 @@ void nfsu2_ps5_input_shutdown(void)
     }
     next_scan = 0;
     pthread_mutex_unlock(&lock);
+}
+
+/* Pad 1's raw buttons for the port menu; 0 when it is not connected. */
+uint32_t nfsu2_ps5_pad_buttons(void)
+{
+    Nfsu2PadData data;
+    uint32_t b = 0;
+    xbox_InputInit();
+    pthread_mutex_lock(&lock);
+    scan_locked();
+    if (read_slot(&slots[0], &data)) b = data.buttons;
+    pthread_mutex_unlock(&lock);
+    return b;
+}
+void nfsu2_ps5_pad_hold(int menu_open)
+{
+    hold_menu = menu_open != 0;
+    hold_game = 1;
 }

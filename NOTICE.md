@@ -16,6 +16,10 @@ dav1d (BSD-2-Clause) decodes upscaled movie packs when a local build has
 them; it is cross-compiled unmodified by `tools/build-dav1d.py`, and its
 licence accompanies the build.
 
+The port menu uses Dear ImGui 1.92.9 (MIT, `ps5/third_party/imgui`) and the
+Roboto Medium font (Apache-2.0, `ps5/third_party/fonts`), both unmodified and
+built into the program; their licences accompany the build.
+
 Source revisions and repositories are listed in `ps5/dependencies.json`.
 Downloaded source stays in `build/deps/`. NFSU2 modifications stay in the
 published host/runtime files and scripts; generated game C is unchanged.

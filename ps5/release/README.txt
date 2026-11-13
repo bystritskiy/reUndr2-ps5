@@ -35,14 +35,20 @@ the game show these PS5 buttons.
 Split screen: the second player needs a separate logged-in PS5 user or a guest.
 Main menu, right, 2 Player Split-Screen; at car select each player presses Options.
 
+PORT SETTINGS
+
+Touchpad + Options in the game opens the port's settings: graphics, motion
+blur, vibration, sound, frame rate and a benchmark, with what is new in each
+version. L1/R1 switch tabs, Circle closes. The game's own Options are as on
+the Xbox.
+
 SOUND
 
 The game's 5.1 mix goes to the PS5 as eight-channel PCM and follows the
-speaker setup in the PS5 settings. Options, Audio: Multichannel Sound On
+speaker setup in the PS5 settings. Port settings, Audio: Multichannel Sound On
 also plays music and the front pair from the centre, subwoofer and rear
 speakers; Off keeps only the game's own surround mix. Speaker Test plays a
-tone from one speaker, or from all of them in turn: set it back to Off
-afterwards.
+tone from one speaker, or from all of them in turn.
 NFSU2_AUDIO_CHANNELS=2 in nfsu2_env.txt brings back stereo.
 
 Settings, saves and logs are in /data/nfsu2/PPSA99027/; the settings themselves

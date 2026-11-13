@@ -234,6 +234,10 @@ int xa2_queue_target(void) { return TARGET; }
 void xa2_get_stats(Xa2Stats *out) { if (!out) return; pthread_mutex_lock(&lock); memset(out,0,sizeof(*out));out->dropped=dropped;out->underruns=starved;pthread_mutex_unlock(&lock); }
 static float master_volume=0.5f;
 void xa2_set_master_volume(float v) { master_volume = v<0?0:v>1?1:v; }
+/* Silent while the port menu holds the title (its voices would loop). */
+static volatile int muted;
+void nfsu2_audio_mute(int on) { muted = on != 0; }
 void apu_output_safety(const int16_t *in,int16_t *out,int n) {
-    for(int i=0;i<n;i++) { float v=in[i]*master_volume; if(v>16422)v=16422;if(v< -16422)v= -16422;out[i]=(int16_t)v; }
+    const float gain = muted ? 0.0f : master_volume;
+    for(int i=0;i<n;i++) { float v=in[i]*gain; if(v>16422)v=16422;if(v< -16422)v= -16422;out[i]=(int16_t)v; }
 }
